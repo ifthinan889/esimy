@@ -1,0 +1,103 @@
+[2025-06-26 08:45:53] response: {
+    "endpoint": "\/package\/list",
+    "postData": {
+        "locationCode": "",
+        "type": "TOPUP",
+        "packageCode": "P4PJDQ93V",
+        "iccid": "8910300000040027195"
+    },
+    "httpCode": 200,
+    "response": {
+        "success": false,
+        "errorCode": "310409",
+        "errorMsg": "the merchant doesn't have the valid iccid.",
+        "obj": null
+    }
+}
+
+[2025-06-26 08:45:56] response: {
+    "endpoint": "\/package\/list",
+    "postData": {
+        "locationCode": "",
+        "type": "TOPUP",
+        "packageCode": "P4PJDQ93V",
+        "iccid": "8910300000040027195"
+    },
+    "httpCode": 200,
+    "response": {
+        "success": false,
+        "errorCode": "310409",
+        "errorMsg": "the merchant doesn't have the valid iccid.",
+        "obj": null
+    }
+}
+
+[2025-06-26 08:45:58] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25062401160010",
+        "iccid": "8910300000040027195",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25062401160011",
+                    "orderNo": "B25062401160010",
+                    "transactionId": "UNL_250624081641_DDFB87",
+                    "imsi": "310840115438848",
+                    "iccid": "8910300000040027195",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$4C64F232F95D4DA69801DCF6E9B83416",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/7234b238990d4901afadc9f90acf225e.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/7234b238990d4901afadc9f90acf225e",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 2,
+                    "dataType": 2,
+                    "activateTime": null,
+                    "expiredTime": "2025-12-21T01:16:42+0000",
+                    "installationTime": null,
+                    "totalVolume": 1048576000,
+                    "totalDuration": 2,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "CANCEL",
+                    "pin": "6562",
+                    "puk": "77027685",
+                    "apn": "isp",
+                    "ipExport": "FR\/NL",
+                    "supportTopUpType": 1,
+                    "fupPolicy": "512 Kbps",
+                    "packageList": [
+                        {
+                            "packageName": "Turkey 500MB\/Day",
+                            "packageCode": "P4PJDQ93V",
+                            "slug": "TR_0.5_Daily",
+                            "duration": 1,
+                            "volume": 524288000,
+                            "locationCode": "TR",
+                            "createTime": "2025-06-24T01:16:42+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
