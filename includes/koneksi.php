@@ -7,8 +7,8 @@ if (!defined('ALLOWED_ACCESS')) {
 
 // Database connection configuration
 $host = DB_HOST ?? "localhost";
-$user = DB_USER ?? "hanisyaa_esim_db";
-$pass = DB_PASS ?? "Solokota10.";
+$user = DB_USER ?? "root";
+$pass = DB_PASS ?? "";
 $dbname = DB_NAME ?? "hanisyaa_esim_db";
 
 // Error handling

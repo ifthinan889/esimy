@@ -1,268 +1,322 @@
 <?php
-// Secure admin login with protection against brute force attacks
 define('ALLOWED_ACCESS', true);
 require_once __DIR__ . '/../config.php';
 
-// Include database connection
 try {
     include '../includes/koneksi.php';
+    include '../includes/functions.php';
 } catch (Exception $e) {
-    error_log("Failed to include database connection: " . $e->getMessage());
+    error_log("Failed to include required files: " . $e->getMessage());
     die("System error. Please try again later.");
 }
 
-// Initialize session securely
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Regenerate session ID to prevent session fixation
-session_regenerate_id(true);
-
-// Check if already logged in, redirect to dashboard
+// Redirect if already logged in
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     header("Location: dashboard.php");
     exit();
 }
 
-// Initialize variables
 $errorMessage = "";
 $username = "";
 
 // Process login
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // CSRF protection
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        logSecurityEvent("CSRF token validation failed in admin login", 'warning');
+    if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
+        logSecurityEvent("CSRF token validation failed", 'warning');
         $errorMessage = "Invalid session. Please try again.";
     } else {
-        // Implement rate limiting for login attempts
-        if (!isset($_SESSION['login_attempts'])) {
-            $_SESSION['login_attempts'] = 0;
-            $_SESSION['last_attempt_time'] = time();
-        }
-        
-        // Check if too many attempts
-        if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < 300) {
-            logSecurityEvent("Too many login attempts - IP: " . $_SERVER['REMOTE_ADDR'], 'warning');
+        $clientId = $_SERVER['REMOTE_ADDR'] . '_admin_login';
+        if (!checkRateLimit($clientId, 5, 300)) {
             $errorMessage = "Too many login attempts. Please try again after 5 minutes.";
-            
-            // Add a small delay to slow down brute force attacks
             sleep(2);
         } else {
-            // Reset counter if 5 minutes have passed
-            if ((time() - $_SESSION['last_attempt_time']) > 300) {
-                $_SESSION['login_attempts'] = 0;
-            }
-            
-            // Update attempt counter
-            $_SESSION['login_attempts']++;
-            $_SESSION['last_attempt_time'] = time();
-            
-            // Sanitize inputs
-            $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
+            $username = trim($_POST['username'] ?? '');
             $password = $_POST['password'] ?? '';
             
-            // Validate inputs
             if (empty($username) || empty($password)) {
                 $errorMessage = "Username dan password harus diisi!";
             } else {
-                // Check if using PDO or mysqli
-                if (isset($pdo)) {
-                    // Using PDO
-                    $stmt = $pdo->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
-                    $stmt->execute([$username]);
-                    $user = $stmt->fetch();
+                $loginResult = attemptLogin($username, $password);
+                
+                if ($loginResult['success']) {
+                    $_SESSION['admin_logged_in'] = true;
+                    $_SESSION['admin_id'] = $loginResult['user_id'];
+                    $_SESSION['admin_username'] = $loginResult['username'];
                     
-                    if ($user && password_verify($password, $user['password_hash'])) {
-                        // Login successful
-                        $_SESSION['admin_logged_in'] = true;
-                        $_SESSION['admin_id'] = $user['id'];
-                        $_SESSION['admin_username'] = $user['username'];
-                        
-                        // Reset login attempts
-                        $_SESSION['login_attempts'] = 0;
-                        
-                        // Regenerate session ID after successful login
-                        session_regenerate_id(true);
-                        
-                        // Log successful login
-                        logSecurityEvent("Admin login successful: " . $username, 'info');
-                        
-                        // Redirect to dashboard
-                        header("Location: dashboard.php");
-                        exit();
-                    } else {
-                        // Check if admin table exists but using default credentials
-                        if ($username === "admin" && $password === "admin123") {
-                            // Default credentials - check if admin table is empty
-                            $checkStmt = $pdo->query("SELECT COUNT(*) FROM admins");
-                            $adminCount = $checkStmt->fetchColumn();
-                            
-                            if ($adminCount == 0) {
-                                // Allow default login if no admins exist
-                                $_SESSION['admin_logged_in'] = true;
-                                $_SESSION['admin_username'] = $username;
-                                
-                                // Create admin user with secure password
-                                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                                $insertStmt = $pdo->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
-                                $insertStmt->execute([$username, $hashedPassword]);
-                                
-                                // Log default login
-                                logSecurityEvent("Admin login with default credentials - created admin user", 'warning');
-                                
-                                // Regenerate session ID
-                                session_regenerate_id(true);
-                                
-                                header("Location: dashboard.php");
-                                exit();
-                            }
-                        }
-                        
-                        // Login failed
-                        $errorMessage = "Username atau password salah!";
-                        logSecurityEvent("Failed admin login attempt for username: " . $username, 'warning');
-                    }
+                    session_regenerate_id(true);
+                    logSecurityEvent("Admin login successful: " . $username, 'info');
+                    
+                    header("Location: dashboard.php");
+                    exit();
                 } else {
-                    // Using mysqli
-                    $stmt = $conn->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
-                    $stmt->bind_param("s", $username);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    
-                    if ($result && $result->num_rows > 0) {
-                        $user = $result->fetch_assoc();
-                        
-                        if (password_verify($password, $user['password_hash'])) {
-                            // Login successful
-                            $_SESSION['admin_logged_in'] = true;
-                            $_SESSION['admin_id'] = $user['id'];
-                            $_SESSION['admin_username'] = $user['username'];
-                            
-                            // Reset login attempts
-                            $_SESSION['login_attempts'] = 0;
-                            
-                            // Regenerate session ID after successful login
-                            session_regenerate_id(true);
-                            
-                            // Log successful login
-                            logSecurityEvent("Admin login successful: " . $username, 'info');
-                            
-                            // Redirect to dashboard
-                            header("Location: dashboard.php");
-                            exit();
-                        } else {
-                            $errorMessage = "Username atau password salah!";
-                            logSecurityEvent("Failed admin login attempt for username: " . $username, 'warning');
-                        }
-                    } else {
-                        // Check if admin table exists but using default credentials
-                        if ($username === "admin" && $password === "admin123") {
-                            // Default credentials - check if admin table is empty
-                            $checkResult = $conn->query("SELECT COUNT(*) as count FROM admins");
-                            $adminCount = $checkResult->fetch_assoc()['count'];
-                            
-                            if ($adminCount == 0) {
-                                // Allow default login if no admins exist
-                                $_SESSION['admin_logged_in'] = true;
-                                $_SESSION['admin_username'] = $username;
-                                
-                                // Create admin user with secure password
-                                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                                $insertStmt = $conn->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
-                                $insertStmt->bind_param("ss", $username, $hashedPassword);
-                                $insertStmt->execute();
-                                
-                                // Log default login
-                                logSecurityEvent("Admin login with default credentials - created admin user", 'warning');
-                                
-                                // Regenerate session ID
-                                session_regenerate_id(true);
-                                
-                                header("Location: dashboard.php");
-                                exit();
-                            }
-                        }
-                        
-                        $errorMessage = "Username atau password salah!";
-                        logSecurityEvent("Failed admin login attempt for username: " . $username, 'warning');
-                    }
-                    
-                    $stmt->close();
+                    $errorMessage = $loginResult['message'];
+                    logSecurityEvent("Failed login: " . $username, 'warning');
                 }
             }
         }
     }
 }
 
-// Generate CSRF token
+function attemptLogin($username, $password) {
+    global $pdo, $conn;
+    
+    try {
+        $admin = null;
+        
+        if (isset($pdo)) {
+            $stmt = $pdo->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        } elseif (isset($conn)) {
+            $stmt = $conn->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $admin = $result ? $result->fetch_assoc() : null;
+            $stmt->close();
+        }
+        
+        if ($admin && password_verify($password, $admin['password_hash'])) {
+            return [
+                'success' => true,
+                'user_id' => $admin['id'],
+                'username' => $admin['username']
+            ];
+        }
+        
+        // Default admin creation for first time setup
+        if ($username === "admin" && $password === "admin123") {
+            $count = 0;
+            if (isset($pdo)) {
+                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM admins");
+                $stmt->execute();
+                $count = $stmt->fetch()['count'];
+            } elseif (isset($conn)) {
+                $result = $conn->query("SELECT COUNT(*) as count FROM admins");
+                $count = $result->fetch_assoc()['count'];
+            }
+            
+            if ($count == 0) {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                if (isset($pdo)) {
+                    $stmt = $pdo->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
+                    if ($stmt->execute([$username, $hash])) {
+                        return ['success' => true, 'user_id' => $pdo->lastInsertId(), 'username' => $username];
+                    }
+                } elseif (isset($conn)) {
+                    $stmt = $conn->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
+                    $stmt->bind_param("ss", $username, $hash);
+                    if ($stmt->execute()) {
+                        $id = $conn->insert_id;
+                        $stmt->close();
+                        return ['success' => true, 'user_id' => $id, 'username' => $username];
+                    }
+                }
+            }
+        }
+        
+        return ['success' => false, 'message' => 'Username atau password salah!'];
+        
+    } catch (Exception $e) {
+        error_log("Login error: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Terjadi kesalahan sistem.'];
+    }
+}
+
+function isFirstRun() {
+    global $pdo, $conn;
+    try {
+        if (isset($pdo)) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM admins");
+            $stmt->execute();
+            return $stmt->fetch()['count'] == 0;
+        } elseif (isset($conn)) {
+            $result = $conn->query("SELECT COUNT(*) as count FROM admins");
+            return $result->fetch_assoc()['count'] == 0;
+        }
+    } catch (Exception $e) {
+        return false;
+    }
+    return false;
+}
+
 $csrf_token = generateCSRFToken();
 ?>
-
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login Admin - eSIM Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/admin-style.css">
-    <meta name="theme-color" content="#4361ee">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/login.css?v=<?= filemtime('assets/css/login.css') ?>">
+    <meta name="theme-color" content="#6366f1">
     <meta name="description" content="Admin login for eSIM Portal">
-    <!-- Security headers -->
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:;">
 </head>
-<body style="background-color: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh;">
-
-<div class="login-container">
-    <div class="login-logo">
-        <img src="assets/images/logo.png" alt="eSIM Portal Logo">
+<body>
+    <div class="bg-animation">
+        <div class="floating-shape shape-1"></div>
+        <div class="floating-shape shape-2"></div>
+        <div class="floating-shape shape-3"></div>
+        <div class="floating-shape shape-4"></div>
+        <div class="floating-shape shape-5"></div>
     </div>
-    
-    <h1 class="login-title">Login Admin</h1>
-    
-    <?php if ($errorMessage): ?>
-    <div class="error-message">
-        <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
+
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <i class="fas fa-moon theme-icon"></i>
+    </button>
+
+    <div class="login-wrapper">
+        <div class="login-container" id="loginContainer">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="logo-container">
+                        <i class="fas fa-shield-alt logo-icon"></i>
+                    </div>
+                    <h1 class="login-title">eSIM Portal</h1>
+                    <p class="login-subtitle">Admin Dashboard</p>
+                </div>
+            </div>
+
+            <?php if (isFirstRun()): ?>
+            <div class="alert alert-info" id="firstRunAlert">
+                <div class="alert-content">
+                    <i class="fas fa-info-circle alert-icon"></i>
+                    <span class="alert-message">Setup awal: Gunakan admin/admin123 untuk login pertama kali</span>
+                    <button class="alert-close" onclick="closeAlert('firstRunAlert')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($errorMessage): ?>
+            <div class="alert alert-error" id="errorAlert">
+                <div class="alert-content">
+                    <i class="fas fa-exclamation-circle alert-icon"></i>
+                    <span class="alert-message"><?= htmlspecialchars($errorMessage) ?></span>
+                    <button class="alert-close" onclick="closeAlert('errorAlert')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <form class="login-form" method="POST" action="" autocomplete="off" id="loginForm">
+                <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+                
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="fas fa-user label-icon"></i>
+                        Username
+                    </label>
+                    <div class="input-container">
+                        <input type="text" 
+                               id="username" 
+                               name="username" 
+                               class="form-input" 
+                               value="<?= htmlspecialchars($username) ?>" 
+                               placeholder="<?= isFirstRun() ? 'admin' : 'Masukkan username' ?>"
+                               required
+                               autocomplete="username">
+                        <i class="fas fa-user input-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="fas fa-lock label-icon"></i>
+                        Password
+                    </label>
+                    <div class="input-container">
+                        <input type="password" 
+                               id="password" 
+                               name="password" 
+                               class="form-input" 
+                               placeholder="<?= isFirstRun() ? 'admin123' : 'Masukkan password' ?>"
+                               required
+                               autocomplete="current-password">
+                        <i class="fas fa-lock input-icon"></i>
+                        <button type="button" class="password-toggle" id="passwordToggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        <span class="checkbox-label">Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-password" onclick="showForgotPassword()">
+                        Lupa password?
+                    </a>
+                </div>
+                
+                <button type="submit" class="login-button" id="loginButton">
+                    <span class="button-text">
+                        <i class="fas fa-sign-in-alt button-icon"></i>
+                        <?= isFirstRun() ? 'Setup Admin' : 'Login' ?>
+                    </span>
+                    <div class="button-loader">
+                        <div class="spinner"></div>
+                    </div>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <a href="../index.php" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Kembali ke Halaman Utama
+                </a>
+                <div class="footer-info">
+                    <p class="version-info">v2.0.0</p>
+                    <p class="copyright">© <?= date('Y') ?> eSIM Portal</p>
+                </div>
+            </div>
+        </div>
     </div>
-    <?php endif; ?>
-    
-    <form class="login-form" method="POST" action="" autocomplete="off">
-        <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-        
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" value="<?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        
-        <button type="submit" class="login-button">Login</button>
-    </form>
-    
-    <a href="../index.php" class="back-link">Kembali ke Halaman Utama</a>
-</div>
 
-<script>
-// Simple form validation
-document.querySelector('.login-form').addEventListener('submit', function(e) {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    
-    if (!username || !password) {
-        e.preventDefault();
-        alert('Username dan password harus diisi!');
-    }
-});
-</script>
+    <div class="modal" id="forgotPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-question-circle"></i> Lupa Password?</h3>
+                <button class="modal-close" onclick="closeModal('forgotPasswordModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Untuk reset password admin, silakan hubungi administrator sistem atau reset melalui database.</p>
+            </div>
+        </div>
+    </div>
 
+    <script src="assets/js/login.js?v=<?= filemtime('assets/js/login.js') ?>"></script>
+    <script>
+        function closeAlert(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(-20px)';
+                setTimeout(() => el.remove(), 300);
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        function showForgotPassword() {
+            document.getElementById('forgotPasswordModal').classList.add('show');
+        }
+    </script>
 </body>
 </html>

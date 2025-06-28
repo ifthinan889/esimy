@@ -15,8 +15,8 @@ ini_set('display_errors', 0);
 
 // Database Configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'hanisyaa_esim_db');
-define('DB_PASS', 'Solokota10.');
+define('DB_USER', 'root');
+define('DB_PASS', '');
 define('DB_NAME', 'hanisyaa_esim_db');
 
 // Payment Gateway Constants
