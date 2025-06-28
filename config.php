@@ -15,8 +15,8 @@ ini_set('display_errors', 0);
 
 // Database Configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_USER', 'hanisyaa_esim_db');
+define('DB_PASS', 'Solokota10.');
 define('DB_NAME', 'hanisyaa_esim_db');
 
 // Payment Gateway Constants
@@ -267,7 +267,38 @@ function setSecurityHeaders() {
     header($cspHeader);
 }
 
+// ===========================================
+// RATE LIMITING SYSTEM
+// ===========================================
 
+function checkRateLimit($identifier, $maxRequests = 20, $timeWindow = 60) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    $key = 'rate_limit_' . md5($identifier);
+    $now = time();
+    
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = ['count' => 1, 'start' => $now];
+        return true;
+    }
+    
+    $data = $_SESSION[$key];
+    
+    if (($now - $data['start']) > $timeWindow) {
+        $_SESSION[$key] = ['count' => 1, 'start' => $now];
+        return true;
+    }
+    
+    if ($data['count'] >= $maxRequests) {
+        logSecurityEvent("Rate limit exceeded for: $identifier", 'warning');
+        return false;
+    }
+    
+    $_SESSION[$key]['count']++;
+    return true;
+}
 
 // ===========================================
 // SESSION CONFIGURATION

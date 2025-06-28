@@ -502,6 +502,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/esim-style.css">
+    <link rel="stylesheet" href="assets/css/esim-style.css?v=<?= filemtime('assets/js/esim-style.css') ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Modern eSIM store with trendy Gen Z design">
     <!-- Security headers -->
@@ -683,9 +684,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <span class="nav-icon">📦</span>
         <span class="nav-label">Orders</span>
     </a>
-    <a href="esim.php" class="nav-item active">
+    <a href="esim.php" class="nav-item activate">
         <span class="nav-icon">📱</span>
         <span class="nav-label">Packages</span>
+    </a>
+    <a href="topup.php" class="nav-item">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">DaftarTopup</span>
+    </a>
+    <a href="settings.php" class="nav-item">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
     </a>
     <a href="logout.php" class="nav-item">
         <span class="nav-icon">👤</span>
@@ -831,7 +840,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 </div>
-
-<script src="assets/js/esim.js"></script>
+<script src="assets/js/esim.js?v=<?= filemtime('assets/js/esim.js') ?>"></script>
 </body>
 </html>

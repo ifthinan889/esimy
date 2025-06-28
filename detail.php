@@ -309,7 +309,7 @@ if (function_exists('updateEsimStatus')) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="assets/css/detail.css">
+    <link rel="stylesheet" href="assets/css/detail.css?v=<?= filemtime('assets/css/detail.css') ?>">
     
     <!-- Meta tags -->
     <meta name="theme-color" content="#667eea">
@@ -505,8 +505,18 @@ if (function_exists('updateEsimStatus')) {
             </div>
         </div>
     </div>
-    
+
 <?php else: ?>
+
+    <!-- ICCID Info -->
+    <div class="iccid-card" onclick="copyToClipboard('<?= $iccid ?>')">
+        <i class="fas fa-sim-card"></i>
+        <div class="iccid-info">
+            <span class="iccid-label">ICCID</span>
+            <span class="iccid-value"><?= $iccid ?></span>
+        </div>
+        <i class="fas fa-copy copy-icon"></i>
+    </div>
     <!-- Active eSIM - Usage Information -->
     <div class="usage-section">
         <!-- Data Usage -->
@@ -532,7 +542,15 @@ if (function_exists('updateEsimStatus')) {
                 </div>
             </div>
         </div>
-        
+            <!-- Action Buttons -->
+        <div class="action-buttons">
+            <?php if ($smdpStatus !== 'DELETED' && !$isNewEsim): ?>
+            <a href="topup.php?token=<?= $waToken ?>&iccid=<?= urlencode($iccid) ?>" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i>
+                Isi Ulang Kuota
+            </a>
+            <?php endif; ?>
+        </div>
         <!-- Time Remaining -->
         <div class="usage-card">
             <div class="usage-header">
@@ -557,16 +575,6 @@ if (function_exists('updateEsimStatus')) {
             </div>
         </div>
         
-        <!-- ICCID Info -->
-        <div class="iccid-card" onclick="copyToClipboard('<?= $iccid ?>')">
-            <i class="fas fa-sim-card"></i>
-            <div class="iccid-info">
-                <span class="iccid-label">ICCID</span>
-                <span class="iccid-value"><?= $iccid ?></span>
-            </div>
-            <i class="fas fa-copy copy-icon"></i>
-        </div>
-        
         <?php if ($kuotaHabis): ?>
         <div class="alert alert-error">
             <i class="fas fa-exclamation-circle"></i>
@@ -575,23 +583,7 @@ if (function_exists('updateEsimStatus')) {
         <?php endif; ?>
     </div>
 <?php endif; ?>
-
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <?php if ($smdpStatus !== 'DELETED' && !$isNewEsim): ?>
-        <a href="topup.php?token=<?= $waToken ?>&iccid=<?= urlencode($iccid) ?>" class="btn btn-primary">
-            <i class="fas fa-plus-circle"></i>
-            Isi Ulang Kuota
-        </a>
-        <?php endif; ?>
-        
-        <a href="https://wa.me/6281325525646?text=Halo%2C%20saya%20butuh%20bantuan%20untuk%20eSIM%20dengan%20token%3A%20<?= $waToken ?>" 
-           class="btn btn-whatsapp" target="_blank">
-            <i class="fab fa-whatsapp"></i>
-            Bantuan WhatsApp
-        </a>
-    </div>
-    
+   
     <!-- Footer -->
     <footer class="footer">
         <p>&copy; <?= date('Y') ?> eSIM Portal - Powered by Mimint</p>
@@ -621,7 +613,7 @@ if (function_exists('updateEsimStatus')) {
     </div>
 </div>
 
-<script src="assets/js/detail.js"></script>
+<script src="assets/js/detail.js?v=<?= filemtime('assets/js/detail.js') ?>"></script>
 <?php if (function_exists('generateStatusJsMappings')): ?>
 <?= generateStatusJsMappings() ?>
 <?php endif; ?>

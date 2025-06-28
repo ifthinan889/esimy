@@ -1,86 +1,94 @@
-# Panel eSIM - PHP Admin System
+# Panel eSIM - PHP Admin System (v2)
 
-Panel eSIM adalah sistem panel berbasis PHP yang memungkinkan admin/reseller/user untuk mengelola eSIM, memonitor penjualan, topup saldo, membuat order, serta integrasi penuh dengan API eSIM dan pembayaran otomatis via Midtrans.
+Panel eSIM adalah sistem panel berbasis PHP yang memudahkan admin, reseller, maupun user untuk mengelola eSIM, memonitor penjualan, topup saldo, membuat order, serta terintegrasi dengan berbagai payment gateway (siap migrasi dari Midtrans ke Duitku/iPaymu/Xendit).
 
-## Fitur Utama
+Fitur Utama
 
-- Sistem login dengan role admin (siap ditambah user/reseller)
-- Dashboard admin: ringkasan statistik order, saldo, aktivitas
-- Manajemen order eSIM: buat, ubah, cek status, proses otomatis via API
-- Manajemen eSIM: cek status, topup, suspend, revoke, detail profile
-- Integrasi Midtrans untuk pembayaran/topup otomatis
-- Webhook: update otomatis status order/eSIM dari API
-- Cek status order/eSIM real-time langsung ke API
-- Fitur generate QR code untuk provisioning eSIM
-- Struktur modular dan mudah dikembangkan
-- Keamanan dasar: validasi, sanitasi, proteksi session, .htaccess
+* Sistem login multi-role: Admin (siap ekspansi untuk user/reseller)
+* Dashboard interaktif: Statistik order, saldo, dan aktivitas real-time
+* Manajemen order eSIM: Buat, cek, update, suspend, dan topup otomatis via API
+* Manajemen eSIM: Monitoring status, kuota, aktivasi, dan revoke eSIM langsung ke provider
+* Integrasi Payment Gateway: Siap migrasi dari Midtrans ke Duitku/iPaymu/Xendit
+* Webhook: Update otomatis status order/eSIM dari API eksternal
+* QR Code Generator: Untuk provisioning eSIM ke device
+* Panel Settings: Atur API key, margin, notifikasi, dsb. langsung via halaman admin
+* AJAX Modular: Hampir semua aksi update tanpa reload, bikin panel ringan & modern
+* Keamanan: Validasi, sanitasi, proteksi session, struktur .htaccess
 
-## Struktur File Utama
+Struktur File
 
 admin/
-  dashboard.php         # Dashboard admin, statistik, ringkasan
-  orders.php            # Manajemen order eSIM
-  esim.php              # Manajemen detail eSIM
-  login.php             # Login admin
-  logout.php            # Logout admin
-  index.php             # Landing page admin
-  assets/               # Asset statis admin (css, js, images)
+dashboard.php         # Dashboard statistik
+orders.php            # Manajemen order
+esim.php              # Data & status eSIM
+settings.php          # Pengaturan sistem
+topup.php             # Pengelolaan topup user/reseller
+login.php             # Login admin
+logout.php            # Logout admin
+index.php             # Halaman utama admin
+assets/               # CSS & JS per modul admin
 
 includes/
-  koneksi.php           # Koneksi database MySQL
-  api.php               # Wrapper komunikasi API eSIM
-  midtrans.php          # Wrapper pembayaran Midtrans
-  functions.php         # Helper, utility
-  generate_qr.php       # Generate QR code untuk eSIM
+koneksi.php           # Koneksi database MySQL (PDO)
+api.php               # Wrapper komunikasi API eSIM
+functions.php         # Helper & utility
+generate\_qr.php       # Generate QR code eSIM
 
-check_status.php        # Endpoint cek status eSIM/order
-config.php              # Konfigurasi utama (API, DB, dsb)
-error.php               # Error handling
-topup.php               # Proses topup saldo eSIM
-webhook.php             # Handler webhook otomatis dari API eSIM
-detail.php              # Detail profile eSIM/order
+config.php              # Konfigurasi utama (DB, API, dsb.)
+detail.php              # Detail eSIM/order
+topup.php               # Endpoint topup saldo
+error.php               # Handler error
 index.php               # Landing utama / redirect
 
-logs/                   # Folder log
-assets/                 # Asset statis global
-README.md               # Dokumentasi project
+assets/                 # Asset statis global (CSS, JS, images)
+logs/                   # Folder log (pastikan writable)
 
-## Cara Instalasi
+NB:
+
+* File legacy/payment gateway lama (midtrans.php, apimbl.php) sudah tidak dipakai
+* File helper CSS/JS tidak aktif sudah dibersihkan
+* Struktur makin modular & gampang di-maintain
+
+Cara Instalasi
 
 1. Clone repo ke web server lokal
-   git clone https://github.com/bocil69/panel.git
-
-2. Buat database MySQL, import file SQL jika ada
-
+   git clone [https://github.com/bocil69/panel.git](https://github.com/bocil69/panel.git)
+2. Buat database MySQL, import SQL jika ada
 3. Edit config.php:
-   - Isi konfigurasi database, API key, endpoint
 
-4. Pastikan folder logs/ dan admin/error_log writable
+   * Isi konfigurasi database, API key, endpoint payment gateway baru
+4. Pastikan folder logs/ & admin/error\_log writable
+5. Akses panel via browser
+   [http://localhost/panel/admin/](http://localhost/panel/admin/) (login admin)
+   Endpoint lain sesuai kebutuhan
 
-5. Akses panel via browser:
-   http://localhost/panel/admin/ (login admin)
-   Endpoint lain bisa diakses sesuai kebutuhan
+Cara Kerja & Workflow
 
-## Cara Kerja & Workflow
+* Semua request ke API (order, query, topup) terpusat di includes/api.php
+* Pembayaran: siap integrasi Duitku/iPaymu/Xendit (tidak lagi via midtrans.php)
+* Status order & eSIM auto-update via webhook/API
+* Admin bisa cek, ubah, suspend, topup eSIM langsung dari panel
+* Role login siap dikembangkan (admin/user/reseller)
+* QR code otomatis untuk aktivasi eSIM di device user
 
-- Semua request ke API (create order, query, topup) lewat includes/api.php
-- Pembayaran otomatis via includes/midtrans.php
-- Webhook update status eSIM/order ke database tanpa manual refresh
-- Admin bisa cek, ubah, suspend, topup eSIM lewat panel
-- Role login bisa dikembangkan untuk user/reseller
-- QR code otomatis untuk aktivasi eSIM di device
+Changelog (v2)
 
-## Catatan Pengembangan
+* Modularisasi admin panel: Settings, topup, orders, dashboard, dsb. jadi file terpisah
+* Migrasi payment gateway: Integrasi Midtrans dihapus, siap pakai Duitku/iPaymu/Xendit
+* AJAX everywhere: Hampir semua proses update tanpa reload, lebih responsif
+* Bersih-bersih file: File helper, payment, CSS/JS, dan log lama yang tidak dipakai sudah dihapus
+* Security improved: Struktur .htaccess, validasi, sanitasi, dan proteksi session lebih kuat
+* Assets rapi: CSS & JS dipisah sesuai fitur, assets tidak tercecer
 
-- Gunakan file .htaccess untuk keamanan path sensitif
-- Input sudah divalidasi & disanitasi, tapi tetap perkuat XSS & CSRF di production
-- Struktur modular, gampang upgrade (misal: tambah role user/reseller, notifikasi dsb)
+Catatan Pengembangan
 
-## Kontribusi & License
+* File .htaccess WAJIB untuk proteksi path sensitif (admin, includes, dsb.)
+* Input sudah divalidasi/sanitasi, lanjutkan hardening XSS & CSRF untuk production
+* Struktur kini siap untuk penambahan role baru, notifikasi, dan fitur-fitur berikutnya
 
-Pull request, ide, dan saran sangat diterima.  
-Project ini open-source dan bisa dipakai/diubah sesuai kebutuhan.
+Kontribusi & License
 
----
+Pull request, ide, dan saran sangat diterima!
+Project ini open-source dan bebas dikembangkan sesuai kebutuhan.
 
-Dibuat oleh bocil69 | Kontak via GitHub  
+Dibuat oleh bocil69 | Kontak via GitHub

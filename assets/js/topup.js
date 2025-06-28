@@ -1,130 +1,28 @@
 /**
- * eSIM Topup JavaScript - Complete Fixed Version
+ * eSIM Topup JavaScript - Balanced Approach with Smart Batching
  */
 
 // Global variables
-let selectedPackage = null;
-let selectedPayment = null;
-let packageData = window.topupData?.packageData || [];
-let paymentMethods = window.topupData?.paymentMethods || {};
-let exchangeRate = window.topupData?.exchangeRate || 18000
-let markupConfig = window.topupData?.markupConfig || [];
-let autoRefreshInterval = null;
+let autoCheckInterval = null;
+let countdownInterval = null;
+let currentCheckDelay = 10; // Start with 10 seconds
+let totalElapsed = 0;
+let isManualChecking = false;
+let expiredTimer = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initializing topup page...');
-    console.log('Package data:', packageData);
-    console.log('Payment methods:', paymentMethods);
+    console.log('🚀 Initializing balanced topup page...');
     console.log('Current step:', window.topupData?.currentStep);
     
     initializeTheme();
     initializeForm();
     initializePackageSelection();
-    initializeOrderSummary();
     initializePaymentStatusChecker();
+    initializeExpiredTimer();
     
-    console.log('✨ Topup page initialized');
+    console.log('✨ Topup page initialized with balanced approach');
 });
-
-/**
- * FUNGSI YANG HILANG - Payment Status Checker
- */
-function initializePaymentStatusChecker() {
-    console.log('Initializing payment status checker...');
-    
-    // Hanya jalankan jika sedang di halaman payment pending
-    if (window.topupData?.currentStep === 'payment_pending') {
-        console.log('Starting auto refresh for payment pending...');
-        startAutoRefresh();
-    } else {
-        console.log('Not in payment pending step, skipping auto refresh');
-    }
-}
-
-function startAutoRefresh() {
-    let countdown = 30;
-    const timerElement = document.getElementById('refreshTimer');
-    const statusElement = document.getElementById('statusText');
-    
-    console.log('Starting auto refresh timer...');
-    
-    // Update timer setiap detik
-    autoRefreshInterval = setInterval(() => {
-        countdown--;
-        
-        if (timerElement) {
-            timerElement.textContent = countdown;
-        }
-        
-        if (countdown <= 0) {
-            console.log('Auto checking payment status...');
-            checkPaymentStatus();
-            countdown = 30; // Reset countdown
-        }
-    }, 1000);
-}
-
-function checkPaymentStatus() {
-    const orderId = window.topupData?.orderId;
-    
-    if (!orderId) {
-        console.error('Order ID not found');
-        return;
-    }
-    
-    const statusElement = document.getElementById('statusText');
-    if (statusElement) {
-        statusElement.textContent = 'Checking...';
-    }
-    
-    console.log('Checking payment status for order:', orderId);
-    
-    // AJAX call ke topup.php yang sama
-    fetch('topup.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `ajax_check_status=1&order_id=${encodeURIComponent(orderId)}&csrf_token=${encodeURIComponent(window.topupData.csrf_token)}`
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Payment status response:', data);
-        
-        if (data.status === 'redirect') {
-            console.log('Redirecting to:', data.url);
-            // Stop auto refresh before redirect
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-            }
-            // Redirect ke status akhir
-            window.location.href = data.url;
-        } else if (data.status === 'error') {
-            if (statusElement) {
-                statusElement.textContent = 'Error: ' + data.message;
-            }
-            showToast('Error checking payment status: ' + data.message, 'error');
-        } else {
-            if (statusElement) {
-                statusElement.textContent = data.message || 'Payment still pending...';
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error checking payment status:', error);
-        if (statusElement) {
-            statusElement.textContent = 'Check failed - will retry in 30s';
-        }
-        showToast('Failed to check payment status', 'error');
-    });
-}
 
 /**
  * Theme Management
@@ -133,11 +31,9 @@ function initializeTheme() {
     const themeToggle = document.getElementById('themeToggle');
     const currentTheme = localStorage.getItem('theme') || 'light';
     
-    // Set initial theme
     document.documentElement.setAttribute('data-theme', currentTheme);
     updateThemeIcon(currentTheme);
     
-    // Theme toggle event
     if (themeToggle) {
         themeToggle.addEventListener('click', function() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
@@ -152,356 +48,431 @@ function initializeTheme() {
 }
 
 function updateThemeIcon(theme) {
-    // Update icon di button theme toggle
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
         themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
-    }
-    
-    // Juga update jika ada elemen dengan class theme-icon
-    const themeIcon = document.querySelector('.theme-icon');
-    if (themeIcon) {
-        themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
     }
 }
 
 /**
  * Form Management
  */
-/**
- * Form Management - SUPER SIMPLE VERSION tanpa validasi
- */
 function initializeForm() {
     console.log('Initializing form...');
     
-    // HAPUS SEMUA VALIDASI - biarkan PHP handle semuanya
     const forms = document.querySelectorAll('form[method="POST"]');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
-            // Cuma show loading, ga ada validasi apapun
-            showLoadingOverlay('Processing...');
-            return true; // Always allow submission
+            showLoadingOverlay('Processing payment...');
+            return true;
         });
     });
-
-    
-    // Legacy support untuk button dengan ID createPaymentBtn
-    const createPaymentBtn = document.getElementById('createPaymentBtn');
-    if (createPaymentBtn) {
-        createPaymentBtn.addEventListener('click', function() {
-            if (!validateSelections()) {
-                return false;
-            }
-            createPayment();
-        });
-    }
-}
-
-function createPayment() {
-    if (!selectedPackage || !selectedPayment) {
-        showToast('Please select package and payment method', 'error');
-        return;
-    }
-    
-    const createPaymentBtn = document.getElementById('createPaymentBtn');
-    const paymentForm = document.getElementById('paymentForm');
-    
-    if (!paymentForm) {
-        showToast('Form not found', 'error');
-        return;
-    }
-    
-    // Set form values
-    document.getElementById('hiddenPackageCode').value = selectedPackage;
-    document.getElementById('hiddenPaymentMethod').value = selectedPayment;
-    
-    // Show loading state
-    if (createPaymentBtn) {
-        createPaymentBtn.classList.add('loading');
-        createPaymentBtn.disabled = true;
-    }
-    
-    showLoadingOverlay('Creating payment...');
-    
-    // Submit form
-    paymentForm.submit();
-}
-
-function validateSelections() {
-    if (!selectedPackage) {
-        showToast('Please select a package', 'error');
-        return false;
-    }
-    
-    if (!selectedPayment) {
-        showToast('Please select a payment method', 'error');
-        return false;
-    }
-    
-    return true;
 }
 
 /**
- * Package Selection - SIMPLE VERSION tanpa loop
+ * Package Selection with Total Update
  */
 function initializePackageSelection() {
-    const packageInputs = document.querySelectorAll('input[name="package_code"]');
-    console.log('Package inputs found:', packageInputs.length);
+    const uniqueCode = window.topupData?.uniqueCode || 0;
     
-    // Gunakan event delegation untuk menghindari multiple listeners
+    // Update total when package selection changes
     document.addEventListener('change', function(e) {
         if (e.target.name === 'package_code' && e.target.checked) {
-            selectedPackage = e.target.value;
-            console.log('Package selected:', selectedPackage);
+            updateTotal();
             
-            // Remove selected class from all cards
+            // Visual feedback
             document.querySelectorAll('.package-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            
-            // Add selected class to current card
             e.target.closest('.package-card').classList.add('selected');
-            
-            updateOrderSummary();
-            validateCreateButton();
-            
-            // Show toast only once
-            if (!e.target.dataset.toastShown) {
-                showToast(`Package selected`, 'success');
-                e.target.dataset.toastShown = 'true';
-                
-                // Reset flag after 2 seconds
-                setTimeout(() => {
-                    delete e.target.dataset.toastShown;
-                }, 2000);
-            }
         }
     });
+    
+    // Auto-select first package
+    const firstPackage = document.querySelector('input[name="package_code"]');
+    if (firstPackage) {
+        firstPackage.checked = true;
+        updateTotal();
+        firstPackage.closest('.package-card').classList.add('selected');
+    }
+}
+
+function updateTotal() {
+    const selectedPackage = document.querySelector('input[name="package_code"]:checked');
+    const totalElement = document.getElementById('paymentTotal');
+    const uniqueCode = window.topupData?.uniqueCode || 0;
+    
+    if (selectedPackage && totalElement) {
+        const packagePrice = parseInt(selectedPackage.getAttribute('data-price'));
+        const totalPrice = packagePrice + uniqueCode;
+        totalElement.innerHTML = `Total: <strong>Rp ${totalPrice.toLocaleString('id-ID')}</strong>`;
+        totalElement.style.color = 'var(--success-color)';
+    }
 }
 
 /**
- * Payment Method Selection - SIMPLE VERSION tanpa loop
+ * Smart Payment Status Checker - BALANCED APPROACH
  */
-function initializePaymentSelection() {
-    const paymentInputs = document.querySelectorAll('input[name="payment_method"]');
-    console.log('Payment inputs found:', paymentInputs.length);
+function initializePaymentStatusChecker() {
+    if (window.topupData?.currentStep !== 'payment_pending') {
+        console.log('Not in payment pending step, skipping status checker');
+        return;
+    }
     
-    // Gunakan event delegation untuk menghindari multiple listeners
-    document.addEventListener('change', function(e) {
-        if (e.target.name === 'payment_method' && e.target.checked) {
-            selectedPayment = e.target.value;
-            console.log('Payment method selected:', selectedPayment);
-            
-            // Remove selected class from all methods
-            document.querySelectorAll('.payment-method').forEach(method => {
-                method.classList.remove('selected');
-            });
-            
-            // Add selected class to current method
-            e.target.closest('.payment-method').classList.add('selected');
-            
-            updateOrderSummary();
-            validateCreateButton();
-            
-            // Show toast only once
-            if (!e.target.dataset.toastShown) {
-                showToast(`Payment method selected`, 'success');
-                e.target.dataset.toastShown = 'true';
-                
-                // Reset flag after 2 seconds
-                setTimeout(() => {
-                    delete e.target.dataset.toastShown;
-                }, 2000);
-            }
-        }
-    });
+    console.log('Initializing smart payment status checker...');
+    startSmartAutoCheck();
 }
 
-/**
- * Order Summary - SIMPLIFIED untuk layout baru
- */
-function initializeOrderSummary() {
-    console.log('Initializing order summary...');
-    // Untuk layout baru, order summary tidak diperlukan karena harga sudah ditampilkan
-    // di setiap package card
+function startSmartAutoCheck() {
+    console.log('Starting smart auto-check with balanced approach...');
+    
+    // Clear any existing intervals
+    if (autoCheckInterval) clearInterval(autoCheckInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    
+    // Start with immediate check
+    checkPaymentStatus();
+    
+    // Set up the smart checking system
+    scheduleNextCheck();
 }
 
-function updateOrderSummary() {
-    const summaryContainer = document.getElementById('orderSummary');
-    if (!summaryContainer) {
-        // Tidak ada container summary di layout baru, skip
-        return;
-    }
+function scheduleNextCheck() {
+    // Dynamic delay based on elapsed time (3-minute window)
+    let delay;
     
-    if (!selectedPackage || !selectedPayment) {
-        summaryContainer.innerHTML = `
-            <div class="summary-placeholder">
-                <div class="placeholder-icon">📦</div>
-                <p>Select package and payment method to see summary</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Find package info dari DOM karena packageData mungkin kosong
-    const selectedPackageElement = document.querySelector(`input[name="package_code"][value="${selectedPackage}"]`);
-    if (!selectedPackageElement) {
-        console.log('Selected package element not found');
-        return;
-    }
-    
-    const packageCard = selectedPackageElement.closest('.package-card');
-    const packageName = packageCard.querySelector('.package-name')?.textContent || 'Unknown Package';
-    const packageSize = packageCard.querySelector('.package-size')?.textContent || '0 GB';
-    const packagePrice = packageCard.querySelector('.package-price')?.textContent || 'Rp 0';
-    
-    // Find payment info
-    const selectedPaymentElement = document.querySelector(`input[name="payment_method"][value="${selectedPayment}"]`);
-    if (!selectedPaymentElement) {
-        console.log('Selected payment element not found');
-        return;
-    }
-    
-    const paymentCard = selectedPaymentElement.closest('.payment-method');
-    const paymentName = paymentCard.querySelector('.payment-name')?.textContent || 'Unknown Payment';
-    const paymentFee = paymentCard.querySelector('.payment-fee')?.textContent || 'Fee: Rp 0';
-    
-    summaryContainer.innerHTML = `
-        <div class="summary-content show">
-            <div class="summary-row">
-                <span class="label">Package</span>
-                <span class="value">${packageName}</span>
-            </div>
-            <div class="summary-row">
-                <span class="label">Data</span>
-                <span class="value">${packageSize}</span>
-            </div>
-            <div class="summary-row">
-                <span class="label">Payment Method</span>
-                <span class="value">${paymentName}</span>
-            </div>
-            <div class="summary-row">
-                <span class="label">Package Price</span>
-                <span class="value">${packagePrice}</span>
-            </div>
-            <div class="summary-row">
-                <span class="label">${paymentFee}</span>
-                <span class="value"></span>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Button Validation - SIMPLIFIED
- */
-function validateCreateButton() {
-    const createBtn = document.getElementById('createPaymentBtn');
-    if (!createBtn) return;
-    
-    const packageSelected = document.querySelector('input[name="package_code"]:checked');
-    const paymentSelected = document.querySelector('input[name="payment_method"]:checked');
-    const isValid = packageSelected && paymentSelected;
-    
-    createBtn.disabled = !isValid;
-    
-    if (isValid) {
-        createBtn.classList.remove('disabled');
-        createBtn.style.opacity = '1';
-        createBtn.style.cursor = 'pointer';
+    if (totalElapsed < 30) {
+        // First 30 seconds: Check every 10 seconds
+        delay = 10;
+    } else if (totalElapsed < 60) {
+        // 30s-1m: Check every 15 seconds
+        delay = 15;
+    } else if (totalElapsed < 120) {
+        // 1m-2m: Check every 20 seconds
+        delay = 20;
+    } else if (totalElapsed < 180) {
+        // 2m-3m: Check every 30 seconds
+        delay = 30;
     } else {
-        createBtn.classList.add('disabled');
-        createBtn.style.opacity = '0.5';
-        createBtn.style.cursor = 'not-allowed';
+        // After 3 minutes: Stop auto-checking (should be expired)
+        console.log('Payment window expired, stopping auto-check');
+        updateCheckStatus('Payment window expired', 'warning');
+        return;
     }
     
-    console.log('Button validation:', {
-        packageSelected: !!packageSelected,
-        paymentSelected: !!paymentSelected,
-        isValid,
-        disabled: createBtn.disabled
+    currentCheckDelay = delay;
+    startCountdownTimer(delay);
+}
+
+function startCountdownTimer(seconds) {
+    let remainingSeconds = seconds;
+    
+    // Update countdown display
+    updateCountdownDisplay(remainingSeconds);
+    
+    countdownInterval = setInterval(() => {
+        remainingSeconds--;
+        updateCountdownDisplay(remainingSeconds);
+        
+        if (remainingSeconds <= 0) {
+            clearInterval(countdownInterval);
+            totalElapsed += seconds;
+            
+            // Perform the check
+            checkPaymentStatus();
+            
+            // Schedule next check
+            setTimeout(() => {
+                if (window.topupData?.currentStep === 'payment_pending') {
+                    scheduleNextCheck();
+                }
+            }, 1000);
+        }
+    }, 1000);
+}
+
+function updateCountdownDisplay(seconds) {
+    const countdownElement = document.getElementById('countdown');
+    if (countdownElement) {
+        countdownElement.textContent = seconds;
+    }
+}
+
+function updateCheckStatus(message, type = 'info') {
+    const statusElement = document.getElementById('checkStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+        
+        // Add visual feedback based on type
+        statusElement.className = 'check-status';
+        if (type === 'error') {
+            statusElement.style.color = 'var(--error-color)';
+        } else if (type === 'success') {
+            statusElement.style.color = 'var(--success-color)';
+        } else if (type === 'warning') {
+            statusElement.style.color = 'var(--warning-color)';
+        } else {
+            statusElement.style.color = '';
+        }
+    }
+}
+
+/**
+ * Payment Status Check Function
+ */
+function checkPaymentStatus() {
+    if (isManualChecking) {
+        console.log('Manual check in progress, skipping automatic check');
+        return;
+    }
+    
+    const orderId = window.topupData?.orderId;
+    if (!orderId) {
+        console.error('Order ID not found');
+        updateCheckStatus('Error: Order ID not found', 'error');
+        return;
+    }
+    
+    console.log(`Checking payment status for order: ${orderId} (elapsed: ${totalElapsed}s)`);
+    updateCheckStatus('Checking payment status...', 'info');
+    
+    // Use batch check for efficiency
+    fetch('topup.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `ajax_batch_check=1&csrf_token=${encodeURIComponent(window.topupData.csrf_token)}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Batch check response:', data);
+        
+        if (data.success) {
+            if (data.updated_orders && data.updated_orders.includes(orderId)) {
+                // Our order was updated to paid!
+                console.log('🎉 Payment confirmed via batch check!');
+                updateCheckStatus('Payment confirmed! Redirecting...', 'success');
+                showToast('Payment successful! 🎉', 'success');
+                
+                // Stop all timers
+                stopAllTimers();
+                
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+                return;
+            }
+            
+            // Payment still pending, but batch check was successful
+            const apiCalls = data.api_calls || 0;
+            const checkedOrders = data.checked_orders || 0;
+            updateCheckStatus(`Waiting for payment... (${checkedOrders} orders checked)`, 'info');
+            
+            console.log(`Batch check completed: ${checkedOrders} orders checked, ${apiCalls} API calls`);
+        } else {
+            // Fallback to single order check
+            console.log('Batch check failed, trying single order check...');
+            checkSingleOrderStatus(orderId);
+        }
+    })
+    .catch(error => {
+        console.error('Batch check error:', error);
+        updateCheckStatus('Check failed, retrying...', 'error');
+        
+        // Fallback to single order check
+        checkSingleOrderStatus(orderId);
+    });
+}
+
+function checkSingleOrderStatus(orderId) {
+    fetch('topup.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `ajax_check_status=1&order_id=${encodeURIComponent(orderId)}&csrf_token=${encodeURIComponent(window.topupData.csrf_token)}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Single order check response:', data);
+        
+        if (data.success) {
+            if (data.status === 'paid') {
+                console.log('🎉 Payment confirmed via single check!');
+                updateCheckStatus('Payment confirmed! Redirecting...', 'success');
+                showToast('Payment successful! 🎉', 'success');
+                
+                stopAllTimers();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else if (data.status === 'expired') {
+                console.log('Payment expired');
+                updateCheckStatus('Payment expired', 'warning');
+                stopAllTimers();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                updateCheckStatus('Waiting for payment...', 'info');
+            }
+        } else {
+            updateCheckStatus('Check failed: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Single order check error:', error);
+        updateCheckStatus('Connection error, will retry...', 'error');
     });
 }
 
 /**
- * Helper Functions
+ * Manual Check Function
  */
-function calculateFinalPrice(originalPriceUsd, exchangeRate, volumeGB, markupConfig) {
-    const priceIdr = originalPriceUsd * exchangeRate;
-    const markup = getTieredMarkup(volumeGB, markupConfig);
-    return Math.round(priceIdr + markup);
-}
-
-function getTieredMarkup(volumeGB, markupConfig) {
-    if (!Array.isArray(markupConfig) || markupConfig.length === 0) {
-        return 10000;
+function manualCheck() {
+    if (isManualChecking) {
+        showToast('Please wait, check in progress...', 'warning');
+        return;
     }
     
-    for (const tier of markupConfig) {
-        if (volumeGB <= parseFloat(tier.limit)) {
-            return parseFloat(tier.markup);
+    console.log('Manual check requested');
+    isManualChecking = true;
+    
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '🔄 Checking...';
+    button.disabled = true;
+    
+    updateCheckStatus('Manual check in progress...', 'info');
+    
+    // Perform immediate check
+    const orderId = window.topupData?.orderId;
+    if (!orderId) {
+        updateCheckStatus('Error: Order ID not found', 'error');
+        isManualChecking = false;
+        button.textContent = originalText;
+        button.disabled = false;
+        return;
+    }
+    
+    checkSingleOrderStatus(orderId);
+    
+    // Reset button after 3 seconds
+    setTimeout(() => {
+        isManualChecking = false;
+        button.textContent = originalText;
+        button.disabled = false;
+    }, 3000);
+    
+    showToast('Manual check performed', 'info');
+}
+
+/**
+ * Expired Timer (for QRIS expiration)
+ */
+function initializeExpiredTimer() {
+    if (window.topupData?.currentStep !== 'payment_pending') {
+        return;
+    }
+    
+    const expiredAt = window.topupData?.expiredAt;
+    if (!expiredAt) {
+        console.log('No expiration time found');
+        return;
+    }
+    
+    console.log('Initializing expiry timer for:', expiredAt);
+    updateExpiredTimer();
+    
+    expiredTimer = setInterval(updateExpiredTimer, 1000);
+}
+
+function updateExpiredTimer() {
+    const expiredAt = window.topupData?.expiredAt;
+    const timerElement = document.getElementById('expiredTimer');
+    
+    if (!expiredAt || !timerElement) {
+        return;
+    }
+    
+    try {
+        const expiredTime = new Date(expiredAt).getTime();
+        const now = new Date().getTime();
+        const diff = Math.max(0, Math.floor((expiredTime - now) / 1000));
+        
+        if (diff <= 0) {
+            timerElement.textContent = 'EXPIRED';
+            timerElement.style.color = 'var(--error-color)';
+            stopAllTimers();
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            const minutes = Math.floor(diff / 60);
+            const seconds = diff % 60;
+            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Color coding based on time remaining
+            if (diff < 30) {
+                timerElement.style.color = 'var(--error-color)';
+            } else if (diff < 60) {
+                timerElement.style.color = 'var(--warning-color)';
+            } else {
+                timerElement.style.color = 'var(--success-color)';
+            }
         }
+    } catch (error) {
+        console.error('Error updating expired timer:', error);
+        timerElement.textContent = 'Error';
     }
-    
-    const lastTier = markupConfig[markupConfig.length - 1];
-    return parseFloat(lastTier.markup) || 10000;
 }
 
-function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+/**
+ * Utility Functions
+ */
+function stopAllTimers() {
+    if (autoCheckInterval) {
+        clearInterval(autoCheckInterval);
+        autoCheckInterval = null;
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    if (expiredTimer) {
+        clearInterval(expiredTimer);
+        expiredTimer = null;
+    }
+    console.log('All timers stopped');
 }
 
 function showLoadingOverlay(message = 'Loading...') {
-    // Buat loading overlay jika belum ada
     let overlay = document.getElementById('loadingOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'loadingOverlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
+        overlay.className = 'loading-overlay';
         
         overlay.innerHTML = `
-            <div class="loading-spinner" style="
-                background: white;
-                padding: 2rem;
-                border-radius: 8px;
-                text-align: center;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            ">
-                <div style="
-                    width: 40px;
-                    height: 40px;
-                    border: 4px solid #f3f3f3;
-                    border-top: 4px solid #3498db;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    margin: 0 auto 1rem;
-                "></div>
-                <p style="margin: 0; color: #333;">${message}</p>
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>${message}</p>
             </div>
         `;
-        
-        // Add CSS animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
         
         document.body.appendChild(overlay);
     }
@@ -511,20 +482,20 @@ function showLoadingOverlay(message = 'Loading...') {
         messageEl.textContent = message;
     }
     
-    overlay.style.display = 'flex';
-    setTimeout(() => {
-        overlay.style.opacity = '1';
-    }, 10);
+    overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 }
 
 function hideLoadingOverlay() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) {
-        overlay.style.opacity = '0';
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+        
         setTimeout(() => {
-            overlay.style.display = 'none';
-            document.body.style.overflow = '';
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
         }, 300);
     }
 }
@@ -576,19 +547,10 @@ function createToastContainer() {
     const container = document.createElement('div');
     container.id = 'toastContainer';
     container.className = 'toast-container';
-    container.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-    `;
     document.body.appendChild(container);
     return container;
 }
 
-/**
- * Copy to Clipboard
- */
 function copyToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
@@ -623,20 +585,19 @@ function fallbackCopy(text) {
 
 // Cleanup function
 function cleanup() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-    }
+    stopAllTimers();
+    hideLoadingOverlay();
 }
 
-// Cleanup saat page unload
+// Event listeners
 window.addEventListener('beforeunload', cleanup);
+window.addEventListener('unload', cleanup);
 
 // Global functions
+window.manualCheck = manualCheck;
 window.copyToClipboard = copyToClipboard;
-window.checkPaymentStatus = checkPaymentStatus;
 window.showToast = showToast;
 window.showLoadingOverlay = showLoadingOverlay;
 window.hideLoadingOverlay = hideLoadingOverlay;
 
-console.log('📱 Topup JS loaded successfully - Complete version');
+console.log('📱 Topup JS loaded successfully - Balanced Smart Batching version');

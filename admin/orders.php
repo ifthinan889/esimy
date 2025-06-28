@@ -639,8 +639,7 @@ $currentExchangeRate = getCurrentExchangeRate();
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Orders CSS yang sudah diselaraskan dengan eSIM style -->
-    <link rel="stylesheet" href="assets/css/orders.css">
-    
+    <link rel="stylesheet" href="assets/css/orders.css?v=<?= filemtime('assets/js/orders.css') ?>">
     <meta name="theme-color" content="#0f172a">
     <meta name="description" content="Orders management for eSIM Portal">
     
@@ -836,26 +835,6 @@ $currentExchangeRate = getCurrentExchangeRate();
     <?php endif; ?>
 </main>
 
-<!-- Bottom Navigation - Sama seperti eSIM -->
-<nav class="bottom-nav">
-    <a href="dashboard.php" class="nav-item">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Dashboard</span>
-    </a>
-    <a href="orders.php" class="nav-item active">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">Orders</span>
-    </a>
-    <a href="esim.php" class="nav-item">
-        <span class="nav-icon">📱</span>
-        <span class="nav-label">Packages</span>
-    </a>
-    <a href="logout.php" class="nav-item">
-        <span class="nav-icon">👤</span>
-        <span class="nav-label">Logout</span>
-    </a>
-</nav>
-
 <!-- eSIM Modal -->
 <div id="esimModal" class="modal">
     <div class="modal-content">
@@ -915,8 +894,36 @@ $currentExchangeRate = getCurrentExchangeRate();
     <div class="loading-text">Memproses...</div>
 </div>
 
+<!-- Bottom Navigation - Sama seperti eSIM -->
+<nav class="bottom-nav">
+    <a href="dashboard.php" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="orders.php" class="nav-item activate">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">Orders</span>
+    </a>
+    <a href="esim.php" class="nav-item">
+        <span class="nav-icon">📱</span>
+        <span class="nav-label">Packages</span>
+    </a>
+    <a href="topup.php" class="nav-item">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">DaftarTopup</span>
+    </a>
+    <a href="settings.php" class="nav-item">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+    </a>
+    <a href="logout.php" class="nav-item">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Logout</span>
+    </a>
+</nav>
+
 <!-- Orders JavaScript yang sudah diselaraskan -->
-<script src="assets/js/orders.js"></script>
+<script src="assets/js/orders.js?v=<?= filemtime('assets/js/orders.js') ?>"></script>
 
 </body>
 </html>

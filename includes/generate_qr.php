@@ -58,7 +58,7 @@ $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urle
 $ch = curl_init($qrUrl);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_SSL_VERIFYPEER => true, // Disable SSL verification for local testing only
     CURLOPT_SSL_VERIFYHOST => 2,
     CURLOPT_TIMEOUT => 10,
     CURLOPT_CONNECTTIMEOUT => 5,

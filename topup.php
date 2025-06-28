@@ -1,429 +1,850 @@
 <?php
-declare(strict_types=1);
-// Production mode - hide errors
-error_reporting(0);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/logs/php_errors.log');
+declare(strict_types=1); // <<< INI PALING ATAS
+ob_start();
+
+// PRODUCTION ERROR HANDLING
+// Ubah bagian paling awal file test.php dan topup.php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+
 define('ALLOWED_ACCESS', true);
-
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/koneksi.php';
+require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/api.php';
+// ✅ TAMBAH INI DI AWAL topup.php setelah require files
+function validateRequiredSettings() {
+    $requiredSettings = [
+        'bukalapak_user_id' => 'Bukalapak User ID tidak ditemukan',
+        'bukalapak_identity' => 'Bukalapak Identity tidak ditemukan',  
+        'bukalapak_token' => 'Bukalapak Token tidak ditemukan',
+        'qris_static_code' => 'QRIS Static Code tidak ditemukan',
+        'exchange_rate_usd_idr' => 'Exchange Rate tidak ditemukan',
+        'qr_generator_url' => 'QR Generator URL tidak ditemukan'
+    ];
+    
+    $missingSettings = [];
+    
+    foreach ($requiredSettings as $key => $errorMsg) {
+        $value = getSetting($key);
+        if (empty($value)) {
+            $missingSettings[] = $errorMsg;
+        }
+    }
+    
+    if (!empty($missingSettings)) {
+        $error = 'Konfigurasi sistem tidak lengkap:<br>' . implode('<br>', $missingSettings);
+        throw new Exception($error);
+    }
+}
 
-// Include semua yang diperlukan dalam urutan yang benar
-include 'includes/koneksi.php';
-include 'includes/functions.php';  // Harus sebelum api.php
-include 'includes/api.php';
-include 'includes/midtrans.php';
-
-// ✅ INITIALIZE eSIM API FROM DATABASE
+// ✅ PANGGIL DI AWAL
 try {
-    initializeEsimApiConfig($pdo);
-    error_log("✅ eSIM API initialized successfully");
+    validateRequiredSettings();
 } catch (Exception $e) {
-    // Log error securely without exposing details
-    error_log("API initialization failed: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
-    http_response_code(500);
-    echo '<!DOCTYPE html><html><head><title>Service Error</title></head><body>';
-    echo '<h1>Service Temporarily Unavailable</h1>';
-    echo '<p>Please try again later. If the problem persists, contact support.</p>';
-    echo '</body></html>';
+    $error = $e->getMessage();
+    // Display error page and exit
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head><title>Configuration Error</title></head>
+    <body>
+        <div style="text-align:center; margin-top:50px;">
+            <h2>⚠️ System Configuration Error</h2>
+            <p><?= $error ?></p>
+            <p><small>Please contact administrator</small></p>
+        </div>
+    </body>
+    </html>
+    <?php
     exit;
 }
-
-// Enhanced input validation and sanitization
-$token = validateInput($_GET['token'] ?? '', 'token');
-$iccid = validateInput($_GET['iccid'] ?? '', 'iccid');
-$orderId = validateInput($_GET['order_id'] ?? '', 'order_id');
-$statusParam = validateInput($_GET['status'] ?? '', 'status');
-
-// Initialize variables
-$order = null;
-$topupPackages = [];
-$paymentMethods = [];
-$paymentResult = null;
-$error = '';
-$success = '';
-$currentStep = 'select_package';
-
-// Configuration
-$exchangeRate = getCurrentExchangeRate();
-$markupConfig = getMarkupConfig(); // Use function from koneksi.php
-
-// Start session first
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Stronger CSRF validation
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $sessionToken = $_SESSION['csrf_token'] ?? '';
-    $postToken = $_POST['csrf_token'] ?? '';
+// ===== BUKALAPAK CHECKER CLASS =====
+class BukalapakChecker {
+    private $baseUrl = 'https://api.bukalapak.com';
+    private $headers;
     
-    if (empty($sessionToken) || empty($postToken) || !hash_equals($sessionToken, $postToken)) {
-        http_response_code(403);
-        if (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
-            header('Content-Type: application/json');
-            echo json_encode(['status'=>'error', 'message'=>'Security validation failed']);
-        } else {
-            die('Security validation failed. Please refresh the page.');
-        }
-        exit();
-    }
-}
-
-// Rate limiting for security
-function checkRateLimit($action = 'general') {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $key = "rate_limit_{$action}_{$ip}";
-    $file = sys_get_temp_dir() . "/{$key}.json";
-    
-    $limits = [
-        'payment' => ['count' => 3, 'window' => 300],
-        'status_check' => ['count' => 30, 'window' => 60],
-        'general' => ['count' => 100, 'window' => 300]
-    ];
-    
-    $limit = $limits[$action] ?? $limits['general'];
-    
-    if (file_exists($file)) {
-        $data = json_decode(file_get_contents($file), true);
-        if ($data && $data['count'] >= $limit['count'] && (time() - $data['time']) < $limit['window']) {
-            http_response_code(429);
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => 'Rate limit exceeded']);
-            exit();
-        }
-    }
-    
-    $currentData = [
-        'count' => ($data['count'] ?? 0) + 1,
-        'time' => $data['time'] ?? time()
-    ];
-    
-    if ((time() - $currentData['time']) >= $limit['window']) {
-        $currentData = ['count' => 1, 'time' => time()];
-    }
-    
-    file_put_contents($file, json_encode($currentData));
-}
-
-// Apply rate limiting
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['create_payment'])) {
-        checkRateLimit('payment');
-    } elseif (isset($_POST['ajax_check_status'])) {
-        checkRateLimit('status_check');
-    }
-}
-
-// AJAX STATUS CHECK - PDO ONLY
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_check_status'])) {
-    header('Content-Type: application/json');
-    
-    $checkOrderId = trim($_POST['order_id'] ?? '');
-    
-    if (empty($checkOrderId)) {
-        echo json_encode(['status' => 'error', 'message' => 'Order ID required']);
-        exit();
-    }
-    
-    try {
-        // Check current status in DB - PDO ONLY
-        $currentOrder = dbQuery("SELECT status, topup_status FROM topup_orders WHERE order_id = ?", [$checkOrderId], false);
+    // ✅ TAMBAH CONSTRUCTOR INI
+    public function __construct() {
+        // Ambil credentials dari database
+        $userId = getSetting('bukalapak_user_id');
+        $identity = getSetting('bukalapak_identity');
+        $token = getSetting('bukalapak_token');
         
-        if (!$currentOrder) {
-            echo json_encode(['status' => 'error', 'message' => 'Order not found']);
-            exit();
+        // Validation
+        if (!$userId || !$identity || !$token) {
+            throw new Exception('Bukalapak API credentials not configured in database');
         }
         
-        $paymentStatus = $currentOrder['status'];
-        $topupStatus = $currentOrder['topup_status'] ?? 'pending';
-        
-        // If still pending, check Midtrans
-        if ($paymentStatus === 'pending') {
-            $settings = getAppSettings();
-            $serverKey = $settings['midtrans_server_key'] ?? '';
-            $isProduction = ($settings['midtrans_is_production'] ?? '0') === '1';
-            
-            if (!empty($serverKey)) {
-                // Check Midtrans status
-                $midtransStatus = checkMidtransPaymentStatus($checkOrderId, $serverKey, $isProduction);
-                
-                if ($midtransStatus) {
-                    $transactionStatus = $midtransStatus['transaction_status'] ?? '';
-                    
-                    if ($transactionStatus === 'settlement') {
-                        // Update payment status - PDO ONLY
-                        dbQuery("UPDATE topup_orders SET status = 'settlement', paid_at = NOW() WHERE order_id = ?", [$checkOrderId]);
-                        $paymentStatus = 'settlement';
-                    }
-                }
-            }
-        }
-        
-        // If payment settled but topup not done, do topup
-        if ($paymentStatus === 'settlement' && $topupStatus === 'pending') {
-            // Get order details for topup - PDO ONLY
-            $orderDetails = dbQuery("SELECT * FROM topup_orders WHERE order_id = ?", [$checkOrderId], false);
-            
-            if ($orderDetails) {
-                // Set topup processing - PDO ONLY
-                dbQuery("UPDATE topup_orders SET topup_status = 'processing' WHERE order_id = ?", [$checkOrderId]);
-                
-                // Call topup API
-                $amountCents = (int)($orderDetails['original_price_usd'] * 10000);
-                $topupResult = topUpEsim(
-                    $orderDetails['iccid'],
-                    $orderDetails['package_code'],
-                    $checkOrderId,
-                    $amountCents
-                );
-                
-                if (isset($topupResult['success']) && $topupResult['success']) {
-                    // Topup success - PDO ONLY
-                    dbQuery("UPDATE topup_orders SET topup_status = 'success', topup_response = ? WHERE order_id = ?", 
-                           [json_encode($topupResult), $checkOrderId]);
-                    $topupStatus = 'success';
-                } else {
-                    // Topup failed - PDO ONLY
-                    dbQuery("UPDATE topup_orders SET topup_status = 'failed', topup_response = ? WHERE order_id = ?", 
-                           [json_encode($topupResult), $checkOrderId]);
-                    $topupStatus = 'failed';
-                }
-            }
-        }
-        
-        // Return final status
-        if ($paymentStatus === 'settlement' && $topupStatus === 'success') {
-            echo json_encode([
-                'status' => 'redirect',
-                'url' => 'topup.php?order_id=' . $checkOrderId . '&status=sukses'
-            ]);
-        } elseif ($paymentStatus === 'settlement' && $topupStatus === 'failed') {
-            echo json_encode([
-                'status' => 'redirect',
-                'url' => 'topup.php?order_id=' . $checkOrderId . '&status=gagal'
-            ]);
-        } elseif ($paymentStatus === 'failed') {
-            echo json_encode([
-                'status' => 'redirect',
-                'url' => 'topup.php?order_id=' . $checkOrderId . '&status=gagal'
-            ]);
-        } else {
-            echo json_encode([
-                'status' => 'pending',
-                'message' => 'Payment or topup still processing...'
-            ]);
-        }
-        
-    } catch (Exception $e) {
-        error_log("AJAX check error: " . $e->getMessage());
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        $this->headers = [
+            'User-Agent: Dalvik/2.1.0 (Linux; U; Android 11; SM-A366B Build/AP3A.240905.015.A2) 2052002 BLMitraAndroid',
+            'Accept: application/json',
+            'Accept-Encoding: gzip',
+            'bukalapak-mitra-version: 2052002',
+            'x-user-id: ' . $userId,
+            'x-device-ad-id: 00000000-0000-0000-0000-000000000000',
+            'bukalapak-identity: ' . $identity,
+            'bukalapak-app-version: 4037005',
+            'ad-user-agent: com.bukalapak.mitra/2.52.2 (Android 15; en_US; SM-A366B; Build/AP3A.240905.015.A2)',
+            'conversion-tracking-params: 00000000-0000-0000-0000-000000000000 15 30 2.52.2',
+            'http-referrer: ',
+            'authorization: Bearer ' . $token,
+        ];
     }
     
-    exit();
-}
-
-// CANCEL PAYMENT HANDLER - PDO ONLY
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["cancel_payment"])) {
-    $cancelOrderId = trim($_POST['order_id'] ?? '');
+    private function makeRequest($url) {
+        // Ambil timeout dari database
+        $timeout = getSetting('bukalapak_api_timeout', 15);
+        
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => $timeout, // ✅ DARI DATABASE
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => $this->headers,
+            CURLOPT_COOKIE => 'incap_ses_1759_2720185=yQ2BZ1lbA0eKl8etfzlpGH96XGgAAAAAgl97kcJ49vkstMA4W75NHw==; path=/; Domain=.bukalapak.com',
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $err = curl_error($curl);
+        curl_close($curl);
+        
+        if ($err) {
+            error_log("❌ cURL Error: " . $err);
+            throw new Exception('cURL Error: ' . $err);
+        }
+        
+        if ($httpCode !== 200) {
+            error_log("❌ HTTP Error: " . $httpCode);
+            throw new Exception('HTTP Error: ' . $httpCode);
+        }
+        
+        $decoded = json_decode($response, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("❌ JSON Error: " . json_last_error_msg());
+            throw new Exception('JSON Decode Error: ' . json_last_error_msg());
+        }
+        
+        return $decoded;
+    }
     
-    if (!empty($cancelOrderId)) {
+    public function checkPaymentNotifications($offset = 0, $limit = 50) {
+        $params = [
+            'offset' => $offset,
+            'limit' => $limit,
+            'platform' => 'onsite_agenlite',
+            'exclude_categories[]' => ['promotion', 'product-recommendation', 'event', 'feature-renewal', 'mitra-operational-info']
+        ];
+        
+        $url = $this->baseUrl . '/notifications/messages?' . http_build_query($params);
+        return $this->makeRequest($url);
+    }
+    
+    public function checkMultiplePayments($pendingOrders) {
         try {
-            // Get order info - PDO ONLY
-            $orderInfo = dbQuery("SELECT iccid, status FROM topup_orders WHERE order_id = ?", [$cancelOrderId], false);
+            error_log("🔄 Starting payment check for " . count($pendingOrders) . " orders");
             
-            if ($orderInfo) {
-                $cancelIccid = $orderInfo['iccid'];
-                $currentStatus = $orderInfo['status'];
-                
-                // Get token from esim_orders - PDO ONLY
-                $esimOrder = dbQuery("SELECT token FROM esim_orders WHERE iccid = ? ORDER BY created_at DESC LIMIT 1", 
-                                   [$cancelIccid], false);
-                
-                $cancelToken = $esimOrder['token'] ?? $token;
-                
-                // CANCEL in Midtrans if status is still pending
-                if ($currentStatus === 'pending') {
-                    $settings = getAppSettings();
-                    $serverKey = $settings['midtrans_server_key'] ?? '';
-                    $isProduction = ($settings['midtrans_is_production'] ?? '0') === '1';
+            $notifications = $this->checkPaymentNotifications(0, 50);
+            
+            // ✅ TAMBAH DETAIL ERROR CHECKING
+            if (!$notifications) {
+                error_log("❌ Notifications is null or false");
+                return ['success' => false, 'message' => 'API returned null response'];
+            }
+            
+            if (!is_array($notifications)) {
+                error_log("❌ Notifications is not array: " . gettype($notifications));
+                return ['success' => false, 'message' => 'API returned non-array response'];
+            }
+            
+            if (!isset($notifications['data'])) {
+                error_log("❌ No data key in response");
+                error_log("📄 Available keys: " . implode(', ', array_keys($notifications)));
+                return ['success' => false, 'message' => 'No data key in API response'];
+            }
+            
+            if (!is_array($notifications['data'])) {
+                error_log("❌ Data is not array: " . gettype($notifications['data']));
+                return ['success' => false, 'message' => 'Data is not array'];
+            }
+            
+            error_log("✅ Got " . count($notifications['data']) . " notifications");
+            
+            $results = [];
+            
+            foreach ($pendingOrders as $order) {
+                $results[$order['order_id']] = [
+                    'found' => false,
+                    'order_id' => $order['order_id'],
+                    'expected_amount' => $order['final_amount']
+                ];
+            }
+            
+            foreach ($notifications['data'] as $notification) {
+                if (isset($notification['body']['tag']) && $notification['body']['tag'] === 'qris-transaction') {
+                    $body = $notification['body']['body'] ?? '';
+                    error_log("🔍 Checking: " . $body);
                     
-                    if (!empty($serverKey)) {
-                        $cancelResult = cancelMidtransPayment($cancelOrderId, $serverKey, $isProduction);
-                        error_log("Midtrans cancel result for $cancelOrderId: " . json_encode($cancelResult));
+                    if (preg_match('/Pembayaran\s+transaksi\s+([A-Z0-9\-]+)\s+sebesar\s+Rp([0-9,\.]+)/', $body, $matches)) {
+                        $transactionId = $matches[1];
+                        $transactionAmount = (int)str_replace(['.', ','], '', $matches[2]);
+                        
+                        error_log("💰 Found payment: " . $transactionId . " = Rp" . number_format((float)($transactionAmount), 0, ',', '.'));
+                        
+                        foreach ($results as $orderId => &$result) {
+                            $expectedAmount = (int)$result['expected_amount'];
+                            
+                            if ($transactionAmount === $expectedAmount && !$result['found']) {
+                                $isRecent = $this->isRecentTransaction($notification['created_at']);
+                                
+                                error_log("🎯 MATCH! Order: " . $orderId . " Amount: " . $expectedAmount . " Recent: " . ($isRecent ? 'Yes' : 'No'));
+                                
+                                $result = [
+                                    'found' => true,
+                                    'order_id' => $orderId,
+                                    'bukalapak_id' => $transactionId,
+                                    'amount' => $transactionAmount,
+                                    'created_at' => $notification['created_at'],
+                                    'is_recent' => $isRecent,
+                                    'notification_body' => $body
+                                ];
+                                break;
+                            }
+                        }
                     }
                 }
+            }
+            
+            return ['success' => true, 'results' => $results];
+            
+        } catch (Exception $e) {
+            error_log("💥 Error in checkMultiplePayments: " . $e->getMessage());
+            error_log("📍 Stack trace: " . $e->getTraceAsString());
+            return ['success' => false, 'message' => 'Exception: ' . $e->getMessage()];
+        }
+    }
+    
+    private function isRecentTransaction($createdAt) {
+        try {
+            $transactionTime = new DateTime($createdAt);
+            $now = new DateTime();
+            $diff = $now->getTimestamp() - $transactionTime->getTimestamp();
+            return $diff <= 300; // 5 minutes
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+}
+
+class QRISPaymentGateway {
+    private $expiredMinutes;
+    private $staticQRIS; 
+    
+    // ✅ TAMBAH CONSTRUCTOR INI
+    public function __construct() {
+        // Ambil dari database menggunakan getSetting()
+        $this->expiredMinutes = getSetting('qris_expired_minutes', 3);
+        $this->staticQRIS = getSetting('qris_static_code');
+        
+        if (!$this->staticQRIS) {
+            throw new Exception('QRIS static code not configured in database');
+        }
+    }
+    
+    // ✅ TETAP ADA - Jangan dihapus!
+    public function generateUniqueCode($pdo, $csrfToken = null) {
+        $pdo->beginTransaction();
+        
+        try {
+            $stmt = $pdo->prepare("SELECT unique_code FROM qris_payments WHERE status = 'pending' AND expired_at > NOW() FOR UPDATE");
+            $stmt->execute();
+            $existing = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+            
+            $finalCode = null;
+            
+            if (!empty($csrfToken)) {
+                $hash = md5($csrfToken);
+                $baseCode = (hexdec(substr($hash, 0, 6)) % 900) + 100;
+                if (!in_array($baseCode, $existing)) {
+                    $finalCode = $baseCode;
+                }
+            }
+            
+            if ($finalCode === null) {
+                do {
+                    $finalCode = rand(100, 999);
+                } while (in_array($finalCode, $existing));
+            }
+            
+            $pdo->commit();
+            return $finalCode;
+            
+        } catch (Exception $e) {
+            $pdo->rollback();
+            throw $e;
+        }
+    }
+    
+    // ✅ TAMBAH INI - Function baru untuk CRC16
+    private function generateCRC16($str) {
+        $crc = 0xFFFF;
+        $len = strlen($str);
+        for ($c = 0; $c < $len; $c++) {
+            $crc ^= ord($str[$c]) << 8;
+            for ($i = 0; $i < 8; $i++) {
+                if ($crc & 0x8000) {
+                    $crc = ($crc << 1) ^ 0x1021;
+                } else {
+                    $crc = $crc << 1;
+                }
+                $crc &= 0xFFFF;
+            }
+        }
+        $hex = strtoupper(dechex($crc));
+        return str_pad($hex, 4, "0", STR_PAD_LEFT);
+    }
+    
+    // ✅ TAMBAH INI - Function baru untuk bikin QRIS dinamis
+    private function createDynamicQRIS($amount) {
+        $amountStr = (string)$amount;
+        $qris = substr($this->staticQRIS, 0, -4);
+        $step1 = str_replace("010211", "010212", $qris);
+        $step2 = explode("5802ID", $step1);
+        $amountField = "54" . sprintf("%02d", strlen($amountStr)) . $amountStr;
+        $fix = trim($step2[0]) . $amountField . "5802ID" . trim($step2[1]);
+        $fix .= $this->generateCRC16($fix);
+        return $fix;
+    }
+
+    // ✅ UBAH INI - Cuma logic QRIS generation aja yang diubah
+    public function generateDynamicQRIS($pdo, $orderId, $baseAmount, $description = '', $csrfToken = null) {
+        $uniqueCode = $this->generateUniqueCode($pdo, $csrfToken);
+        $finalAmount = $baseAmount + $uniqueCode;
+        
+        $qrisCode = $this->createDynamicQRIS($finalAmount);
+        
+        // ✅ FIX INI
+        $qrCodeUrl = "https://hanisyaastore.com/includes/generate_qr.php?data=" . urlencode($qrisCode);
+        
+        // $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urlencode($qrisCode);
+
+        // Sisanya tetap sama persis...
+        $createdAt = date('Y-m-d H:i:s');
+        $expiredAt = date('Y-m-d H:i:s', strtotime("+{$this->expiredMinutes} minutes"));
+
+        $stmt = $pdo->prepare("INSERT INTO qris_payments (order_id, base_amount, unique_code, final_amount, qris_code, qr_code_url, status, description, created_at, expired_at, last_checked)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())");
+        $stmt->execute([
+            $orderId, $baseAmount, $uniqueCode, $finalAmount,
+            $qrisCode, $qrCodeUrl, $description, $createdAt, $expiredAt
+        ]);
+
+        return [
+            'success'      => true,
+            'order_id'     => $orderId,
+            'base_amount'  => $baseAmount,
+            'unique_code'  => $uniqueCode,
+            'final_amount' => $finalAmount,
+            'qris_code'    => $qrisCode,
+            'qr_code_url'  => $qrCodeUrl,
+            'status'       => 'pending',
+            'description'  => $description,
+            'created_at'   => $createdAt,
+            'expired_at'   => $expiredAt,
+            'paid_at'      => null
+        ];
+    }
+
+    public function getTransactionByOrderId($pdo, $orderId) {
+        $stmt = $pdo->prepare("SELECT * FROM qris_payments WHERE order_id = ? LIMIT 1");
+        $stmt->execute([$orderId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatusExpired($pdo) {
+        $stmt = $pdo->prepare("UPDATE qris_payments SET status = 'expired' WHERE status = 'pending' AND expired_at < NOW()");
+        $stmt->execute();
+    }
+    
+    public function getPendingPayments($pdo) {
+        $stmt = $pdo->prepare("
+            SELECT order_id, final_amount, created_at, last_checked 
+            FROM qris_payments 
+            WHERE status = 'pending' AND expired_at > NOW()
+            ORDER BY created_at ASC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function batchVerifyPayments($pdo) {
+        $pendingOrders = $this->getPendingPayments($pdo);
+        
+        if (empty($pendingOrders)) {
+            return ['success' => true, 'message' => 'No pending orders'];
+        }
+        
+        // Rate limiting - don't check if last check was < 10 seconds ago
+        $now = time();
+        $toCheck = [];
+        
+        foreach ($pendingOrders as $order) {
+            $lastChecked = strtotime($order['last_checked']);
+            if (($now - $lastChecked) >= 10) {
+                $toCheck[] = $order;
+            }
+        }
+        
+        if (empty($toCheck)) {
+            return ['success' => true, 'message' => 'Rate limited - too soon'];
+        }
+        
+        $bukalapak = new BukalapakChecker();
+        $verificationResult = $bukalapak->checkMultiplePayments($toCheck);
+        
+        if (!$verificationResult['success']) {
+            return $verificationResult;
+        }
+        
+        $updatedOrders = [];
+        
+        foreach ($verificationResult['results'] as $orderId => $result) {
+            // Update last_checked
+            $stmt = $pdo->prepare("UPDATE qris_payments SET last_checked = NOW() WHERE order_id = ?");
+            $stmt->execute([$orderId]);
+            
+            if ($result['found'] && $result['is_recent']) {
+                // Payment confirmed!
+                $paymentInfo = json_encode([
+                    'verified_by' => 'bukalapak_api',
+                    'verified_amount' => $result['amount'],
+                    'verified_at' => $result['created_at'],
+                    'notification_body' => $result['notification_body']
+                ]);
                 
-                // Update status to cancelled - PDO ONLY
-                dbQuery("UPDATE topup_orders SET status = 'cancelled', updated_at = NOW() WHERE order_id = ?", [$cancelOrderId]);
+                $stmt = $pdo->prepare("
+                    UPDATE qris_payments 
+                    SET status = 'paid', 
+                        paid_at = NOW(), 
+                        payment_info = ?,
+                        verified_by = 'bukalapak_api',
+                        verified_at = NOW()
+                    WHERE order_id = ? AND status = 'pending'
+                ");
+                $stmt->execute([$paymentInfo, $orderId]);
                 
-                error_log("Order $cancelOrderId cancelled successfully, redirecting to token: $cancelToken, iccid: $cancelIccid");
+                // ✅ CEK APAKAH BERHASIL UPDATE STATUS
+                if ($stmt->rowCount() > 0) {
+                    $updatedOrders[] = $orderId;
+                    
+                    // ✅ PROSES AUTO TOPUP (ANTI-LOOP PROTECTION)
+                    $this->processAutoTopup($pdo, $orderId);
+                }
+            }
+        }
+        
+        return [
+            'success' => true,
+            'checked_orders' => count($toCheck),
+            'updated_orders' => $updatedOrders,
+            'api_calls' => 1
+        ];
+    }
+    // ✅ TAMBAH METHOD BARU UNTUK AUTO TOPUP
+    private function processAutoTopup($pdo, $orderId) {
+        try {
+            error_log("🔄 Starting auto topup for order: $orderId");
+            
+            // ✅ CEK APAKAH SUDAH PERNAH DIPROSES (ANTI-LOOP)
+            $stmt = $pdo->prepare("SELECT topup_processed, description, base_amount FROM qris_payments WHERE order_id = ? AND status = 'paid'");
+            $stmt->execute([$orderId]);
+            $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$payment) {
+                error_log("❌ Payment not found or not paid: $orderId");
+                return;
+            }
+            
+            if ($payment['topup_processed'] == 1) {
+                error_log("⚠️ Topup already processed for order: $orderId");
+                return;
+            }
+            
+            // ✅ EXTRACT ICCID FROM DESCRIPTION
+            $description = $payment['description'];
+            if (!preg_match('/Topup eSIM (\d+)/', $description, $matches)) {
+                error_log("❌ Cannot extract ICCID from description: $description");
+                return;
+            }
+            
+            $iccid = $matches[1];
+            error_log("📱 Processing topup for ICCID: $iccid");
+            
+            // ✅ GET ESIM ORDER DETAILS
+            $stmt = $pdo->prepare("SELECT * FROM esim_orders WHERE iccid = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$iccid]);
+            $esimOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$esimOrder) {
+                error_log("❌ eSIM order not found for ICCID: $iccid");
+                $this->markTopupProcessed($pdo, $orderId, ['success' => false, 'error' => 'eSIM order not found']);
+                return;
+            }
+            
+            // ✅ GET SELECTED PACKAGE CODE FROM PAYMENT AMOUNT
+            $baseAmount = $payment['base_amount'] ?? 0;
+            
+            // Get available topup packages
+            $apiResult = getPackageList("", "TOPUP", $esimOrder['packageCode'], $iccid);
+            if (!isset($apiResult["success"]) || !$apiResult["success"] || !isset($apiResult["obj"]["packageList"])) {
+                error_log("❌ Failed to get topup packages for ICCID: $iccid");
+                $this->markTopupProcessed($pdo, $orderId, ['success' => false, 'error' => 'Failed to get topup packages']);
+                return;
+            }
+            
+            // ✅ FIND MATCHING PACKAGE BY AMOUNT
+            $selectedPackage = null;
+            $exchangeRate = getCurrentExchangeRate();
+            $markupConfig = getMarkupConfig();
+            
+            foreach ($apiResult["obj"]["packageList"] as $package) {
+                $volumeGB = round((float)$package["volume"] / (1024**3), 1);
+                $originalPriceUsd = (float)$package["price"] / 10000;
+                $calculatedPrice = calculateFinalPrice($originalPriceUsd, $exchangeRate, $volumeGB, $markupConfig);
                 
-                // Redirect
-                header("Location: topup.php?token=" . urlencode($cancelToken) . "&iccid=" . urlencode($cancelIccid));
-                exit();
-                
+                if ($calculatedPrice == $baseAmount) {
+                    $selectedPackage = $package;
+                    break;
+                }
+            }
+            
+            if (!$selectedPackage) {
+                error_log("❌ No matching package found for amount: $baseAmount");
+                $this->markTopupProcessed($pdo, $orderId, ['success' => false, 'error' => 'No matching package found']);
+                return;
+            }
+            
+            error_log("📦 Selected package: " . $selectedPackage['packageCode'] . " - " . $selectedPackage['name']);
+            
+            // ✅ EXECUTE TOPUP API
+            $topupTxnId = 'topup_' . $orderId . '_' . time();
+            $originalPriceUsd = (float)$selectedPackage["price"] / 10000;
+            $amountCents = intval($originalPriceUsd * 1000); // Convert to cents
+            
+            $topupResult = topUpEsim($iccid, $selectedPackage['packageCode'], $topupTxnId, $amountCents);
+            
+            error_log("📊 Topup API result: " . json_encode($topupResult));
+            
+            // ✅ MARK AS PROCESSED (SUCCESS OR FAIL)
+            $this->markTopupProcessed($pdo, $orderId, $topupResult, $topupTxnId);
+            
+            if (isset($topupResult['success']) && $topupResult['success']) {
+                error_log("✅ Auto topup completed successfully for order: $orderId");
             } else {
-                throw new Exception("Order not found");
+                error_log("❌ Auto topup failed for order: $orderId - " . ($topupResult['errorMsg'] ?? 'Unknown error'));
             }
             
         } catch (Exception $e) {
-            error_log("Cancel payment error: " . $e->getMessage());
-            header("Location: topup.php?token=$token&iccid=$iccid");
-            exit();
+            error_log("💥 Auto topup error for order $orderId: " . $e->getMessage());
+            $this->markTopupProcessed($pdo, $orderId, ['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    // ✅ MARK TOPUP AS PROCESSED (ANTI-LOOP)
+    private function markTopupProcessed($pdo, $orderId, $result, $esimTxnId = null) {
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE qris_payments 
+                SET topup_processed = 1, 
+                    topup_result = ?,
+                    esim_transaction_id = ?
+                WHERE order_id = ?
+            ");
+            $stmt->execute([
+                json_encode($result),
+                $esimTxnId,
+                $orderId
+            ]);
+            
+            error_log("✅ Marked topup as processed for order: $orderId");
+        } catch (Exception $e) {
+            error_log("❌ Failed to mark topup as processed: " . $e->getMessage());
         }
     }
 }
 
-// GET ORDER FROM TOKEN + ICCID - PDO ONLY
-if (!empty($token) && !empty($iccid) && empty($order) && empty($orderId)) {
+// ===== INISIALISASI VARIABEL =====
+// ✅ Tambah ini di awal topup.php (5 menit setup)
+function secureInput($input, $type = 'string') {
+    $input = trim($input);
+    
+    switch($type) {
+        case 'order_id':
+            return preg_replace('/[^a-zA-Z0-9\-_]/', '', $input);
+        case 'token':
+            return preg_replace('/[^A-Z0-9]/', '', $input);
+        case 'iccid':
+            return preg_replace('/[^0-9]/', '', $input);
+        default:
+            return htmlspecialchars(strip_tags($input), ENT_QUOTES, 'UTF-8');
+    }
+}
+
+// ✅ Use di semua input
+$token = secureInput($_GET['token'] ?? '', 'token');
+$iccid = secureInput($_GET['iccid'] ?? '', 'iccid');
+$orderId = secureInput($_GET['order_id'] ?? '', 'order_id');
+$error    = '';
+$order    = null;
+$topupPackages = [];
+$paymentResult = null;
+$currentStep   = 'select_package';
+
+$exchangeRate  = getCurrentExchangeRate();
+$markupConfig  = getMarkupConfig();
+
+if (session_status() === PHP_SESSION_NONE) session_start();
+$csrf_token = generateCSRFToken();
+
+// Generate kode unik preview yang konsisten dengan payment
+try {
+    $qris = new QRISPaymentGateway();
+    $uniqueCodePreview = $qris->generateUniqueCode($pdo, $csrf_token);
+} catch (Exception $e) {
+    $hash = md5($csrf_token);
+    $uniqueCodePreview = (hexdec(substr($hash, 0, 6)) % 900) + 100;
+}
+
+// ===== HANDLE AJAX BATCH CHECK STATUS =====
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax_batch_check"])) {
+    header('Content-Type: application/json');
+    
     try {
-        $order = dbQuery("SELECT * FROM esim_orders WHERE token = ? AND iccid = ? ORDER BY created_at DESC LIMIT 1", 
-                        [$token, $iccid], false);
+        $qris = new QRISPaymentGateway();
+        $qris->updateStatusExpired($pdo);
+        $result = $qris->batchVerifyPayments($pdo);
         
-        if (!$order) {
-            throw new Exception("Order not found");
-        }
-        
-        // Get packages and payment methods
-        $apiResult = getPackageList("", "TOPUP", $order['packageCode'], $iccid);
-        if (isset($apiResult["success"]) && $apiResult["success"] && isset($apiResult["obj"]["packageList"])) {
-            $topupPackages = $apiResult["obj"]["packageList"];
-            usort($topupPackages, function($a, $b) {
-                $volumeA = (float)$a["volume"] / (1024**3);
-                $volumeB = (float)$b["volume"] / (1024**3);
-                return $volumeA <=> $volumeB;
-            });
-        }
-        
-        // Get active payment methods
-        $settings = getAppSettings();
-        $serverKey = $settings['midtrans_server_key'] ?? '';
-        $isProduction = ($settings['midtrans_is_production'] ?? '0') === '1';
-        
-        if (!empty($serverKey)) {
-            $paymentMethods = getCachedActiveMidtransPaymentMethods($serverKey, $isProduction);
-        } else {
-            $paymentMethods = getDefaultPaymentMethods();
-        }
-        
+        echo json_encode($result);
     } catch (Exception $e) {
-        $error = $e->getMessage();
+        error_log("AJAX error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan sistem']);
     }
+    exit;
 }
 
-// CREATE PAYMENT HANDLER  
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create_payment"])) {
-    try {
-        $selectedPackageCode = trim($_POST['package_code'] ?? '');
-        $selectedPaymentMethod = trim($_POST['payment_method'] ?? '');
-        
-        if (empty($selectedPackageCode) || empty($selectedPaymentMethod)) {
-            throw new Exception("Please select package and payment method");
+// ===== HANDLE AJAX CHECK SINGLE STATUS =====
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax_check_status"])) {
+    header('Content-Type: application/json');
+    $checkOrderId = $_POST['order_id'] ?? '';
+    
+    if (!empty($checkOrderId)) {
+        try {
+            $qris = new QRISPaymentGateway();
+            $qris->updateStatusExpired($pdo);
+            
+            $trx = $qris->getTransactionByOrderId($pdo, $checkOrderId);
+            
+            if ($trx) {
+                echo json_encode([
+                    'success' => true,
+                    'status' => $trx['status'],
+                    'order_id' => $trx['order_id']
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'status' => 'not_found']);
+            }
+        } catch (Exception $e) {
+            error_log("Order processing error: " . $e->getMessage());
+            $error = "Terjadi kesalahan saat memproses order.";
         }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Order ID required']);
+    }
+    exit;
+}
+
+// ===== HANDLE CANCEL PAYMENT ===== (Ganti yang ini)
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["cancel_payment"])) {
+    $cancelOrderId = $_POST['order_id'] ?? '';
+    if (!empty($cancelOrderId)) {
+        // Update status ke cancelled
+        $stmt = $pdo->prepare("UPDATE qris_payments SET status = 'cancelled' WHERE order_id = ? AND status = 'pending'");
+        $stmt->execute([$cancelOrderId]);
         
-        $selectedPackage = null;
-        foreach ($topupPackages as $pkg) {
-            if ($pkg['packageCode'] === $selectedPackageCode) {
-                $selectedPackage = $pkg;
-                break;
+        // ✅ FIXED - Extract ICCID dari order untuk redirect yang benar
+        $stmt = $pdo->prepare("SELECT description FROM qris_payments WHERE order_id = ?");
+        $stmt->execute([$cancelOrderId]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($payment && preg_match('/Topup eSIM (\d+)/', $payment['description'], $matches)) {
+            $extractedIccid = $matches[1];
+            
+            // Get token dari esim_orders
+            $stmt = $pdo->prepare("SELECT token FROM esim_orders WHERE iccid = ? ORDER BY created_at DESC LIMIT 1");
+            $stmt->execute([$extractedIccid]);
+            $esimOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($esimOrder) {
+                // Redirect ke halaman pilih package
+                header("Location: topup.php?token=" . urlencode($esimOrder['token']) . "&iccid=" . urlencode($extractedIccid));
+                exit;
             }
         }
         
-        if (!$selectedPackage) {
-            throw new Exception("Package not found");
-        }
-        
-        $paymentResult = createMidtransPayment(
-            $selectedPackage,
-            $order,
-            $selectedPaymentMethod,
-            $markupConfig,
-            $exchangeRate,
-            $pdo
-        );
-        
-        if ($paymentResult['success']) {
-            header("Location: topup.php?order_id=" . urlencode($paymentResult['order_id']) . "&status=pending");
-            exit();
+        // Fallback jika ga bisa extract - pake parameter yang ada
+        if (!empty($token) && !empty($iccid)) {
+            header("Location: topup.php?token=" . urlencode($token) . "&iccid=" . urlencode($iccid));
         } else {
-            throw new Exception($paymentResult['message'] ?? 'Payment creation failed');
+            header("Location: topup.php");
         }
-        
-    } catch (Exception $e) {
-        $error = $e->getMessage();
+        exit;
     }
 }
 
-// GET PAYMENT STATUS BY ORDER ID - PDO ONLY
+// ===== PROSES QRIS PAYMENT STATUS =====
 if (!empty($orderId)) {
     try {
-        $paymentOrder = dbQuery("SELECT * FROM topup_orders WHERE order_id = ?", [$orderId], false);
-        
-        if ($paymentOrder) {
+        $qris = new QRISPaymentGateway();
+        $trx = $qris->getTransactionByOrderId($pdo, $orderId);
+
+        if ($trx) {
+            $qris->updateStatusExpired($pdo);
+            $trx = $qris->getTransactionByOrderId($pdo, $orderId);
+
             $paymentResult = [
-                'success' => true,
-                'order_id' => $paymentOrder['order_id'],
-                'va_number' => $paymentOrder['va_number'],
-                'payment_url' => $paymentOrder['payment_url'],
-                'qr_string' => $paymentOrder['qr_string'],
-                'total_amount' => $paymentOrder['gross_amount'],
-                'payment_method' => $paymentOrder['payment_type'] ?? $paymentOrder['payment_method'],
-                'status' => $paymentOrder['status'],
-                'topup_status' => $paymentOrder['topup_status'] ?? 'pending',
-                'package_name' => $paymentOrder['package_name']
+                'success'      => true,
+                'order_id'     => $trx['order_id'],
+                'base_amount'  => $trx['base_amount'],
+                'unique_code'  => $trx['unique_code'],
+                'total_amount' => $trx['final_amount'],
+                'qris_code'    => $trx['qris_code'],
+                'qr_code_url'  => $trx['qr_code_url'],
+                'status'       => $trx['status'],
+                'expired_at'   => $trx['expired_at'],
+                'paid_at'      => $trx['paid_at'],
+                'description'  => $trx['description'],
             ];
-            
-            // Status protection logic
-            $dbPaymentStatus = $paymentOrder['status'];
-            $dbTopupStatus = $paymentOrder['topup_status'] ?? 'pending';
-            
-            if ($dbTopupStatus === 'failed') {
-                $currentStep = 'topup_failed';
-            } elseif ($dbPaymentStatus === 'settlement' && $dbTopupStatus === 'success') {
-                $currentStep = 'topup_success';
-            } elseif ($dbPaymentStatus === 'failed' || $dbPaymentStatus === 'cancelled') {
-                $currentStep = 'topup_failed';
-            } elseif ($dbPaymentStatus === 'pending' || ($dbPaymentStatus === 'settlement' && $dbTopupStatus === 'pending')) {
-                $currentStep = 'payment_pending';
-            } else {
-                $currentStep = 'payment_pending';
+
+            switch ($trx['status']) {
+                case 'paid':
+                    $currentStep = 'topup_success';
+                    break;
+                case 'pending':
+                    $currentStep = 'payment_pending';
+                    break;
+                case 'expired':
+                    $currentStep = 'payment_expired';
+                    break;
+                case 'cancelled':
+                    $currentStep = 'payment_cancelled';
+                    break;
+                default:
+                    $currentStep = 'topup_failed';
+                    break;
             }
-            
-            // Status URL validation
-            if ($statusParam === 'sukses' && $dbTopupStatus !== 'success') {
-                $redirectStatus = ($dbTopupStatus === 'failed') ? 'gagal' : 'pending';
-                header("Location: topup.php?order_id=" . urlencode($orderId) . "&status=" . $redirectStatus);
-                exit();
+
+            if (!empty($trx['description']) && preg_match('/Topup eSIM (\d+)/', $trx['description'], $matches)) {
+                $extractedIccid = $matches[1];
+                $order = dbQuery("SELECT * FROM esim_orders WHERE iccid = ? ORDER BY created_at DESC LIMIT 1", [$extractedIccid], false);
+                if ($order) {
+                    $iccid = $extractedIccid;
+                    $token = $order['token'] ?? '';
+                }
             }
-            
-            if ($statusParam === 'gagal' && $dbTopupStatus === 'success') {
-                header("Location: topup.php?order_id=" . urlencode($orderId) . "&status=sukses");
-                exit();
-            }
-            
-            error_log("Order access: {$orderId} - DB Status: {$dbPaymentStatus}/{$dbTopupStatus} - URL Status: {$statusParam} - Final Step: {$currentStep}");
-            
         } else {
-            throw new Exception("Order not found");
+            $error = "Order tidak ditemukan!";
         }
-        
     } catch (Exception $e) {
-        $error = $e->getMessage();
+        $error = "Error: " . $e->getMessage();
     }
 }
 
-$csrf_token = generateCSRFToken();
-?>
+// ===== AMBIL DATA ORDER ESIM =====
+if (!empty($token) && !empty($iccid) && empty($orderId)) {
+    try {
+        $order = dbQuery("SELECT * FROM esim_orders WHERE token = ? AND iccid = ? ORDER BY created_at DESC LIMIT 1", [$token, $iccid], false);
+        if ($order) {
+            $apiResult = getPackageList("", "TOPUP", $order['packageCode'], $iccid);
+            if (isset($apiResult["success"]) && $apiResult["success"] && isset($apiResult["obj"]["packageList"])) {
+                $topupPackages = $apiResult["obj"]["packageList"];
+                usort($topupPackages, function($a, $b) {
+                    $volumeA = (float)$a["volume"] / (1024**3);
+                    $volumeB = (float)$b["volume"] / (1024**3);
+                    return $volumeA <=> $volumeB;
+                });
+            }
+        } else {
+            $error = 'Order tidak ditemukan!';
+        }
+    } catch (Exception $e) {
+        $error = "Error: " . $e->getMessage();
+    }
+}
 
+// ✅ PERBAIKI LOGIC CSRF
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create_payment"])) {
+    // Cek CSRF dulu
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $csrf_token) {
+        $error = 'Request tidak valid - silakan refresh halaman';
+    } else {
+        try {
+            $selectedPackageCode = trim($_POST['package_code'] ?? '');
+            if (empty($selectedPackageCode)) throw new Exception("Pilih paket terlebih dahulu.");
+            
+            $selectedPackage = null;
+            foreach ($topupPackages as $pkg) {
+                if ($pkg['packageCode'] === $selectedPackageCode) {
+                    $selectedPackage = $pkg; 
+                    break;
+                }
+            }
+            if (!$selectedPackage) throw new Exception("Paket tidak ditemukan.");
+
+            $volumeGB = round((float)$selectedPackage["volume"] / (1024**3), 1);
+            $originalPriceUsd = (float)$selectedPackage["price"] / 10000;
+            $finalPrice = calculateFinalPrice($originalPriceUsd, $exchangeRate, $volumeGB, $markupConfig);
+
+            $orderIdBaru = 'trx' . uniqid();
+            $desc = "Topup eSIM {$order['iccid']} - Paket {$selectedPackage['name']}";
+
+            $qris = new QRISPaymentGateway();
+            $result = $qris->generateDynamicQRIS($pdo, $orderIdBaru, $finalPrice, $desc, $csrf_token);
+            if ($result && $result['success']) {
+                header("Location: topup.php?order_id=" . urlencode($result['order_id']) . "&status=pending");
+                exit();
+            } else {
+                throw new Exception("QRIS creation failed.");
+            }
+        } catch (Exception $e) {
+            // ✅ Safe error handling
+            error_log("Payment creation error: " . $e->getMessage());
+            $error = "Terjadi kesalahan sistem. Silakan coba lagi.";
+        }
+    }
+}
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+?>
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#8B5CF6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>✨ eSIM Topup</title>
-    <link rel="stylesheet" href="assets/css/topup.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/topup.css?v=<?= filemtime('assets/css/topup.css') ?>">
 </head>
 <body>
     <div class="container">
@@ -436,12 +857,16 @@ $csrf_token = generateCSRFToken();
         <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <?php if ($currentStep === 'select_package'): ?>
+        <?php if (empty($order) && empty($orderId)): ?>
+        <div class="alert alert-warning">Order tidak ditemukan!</div>
+        <?php endif; ?>
+
+        <?php if ($currentStep === 'select_package' && !empty($order)): ?>
         <!-- PACKAGE SELECTION -->
         <div class="user-card">
             <div class="user-avatar"><?= strtoupper(substr((string)($order['nama'] ?? ''), 0, 2)) ?></div>
             <div class="user-info">
-                <h2 class="user-name"><?= htmlspecialchars($order['nama']) ?></h2>
+                <h2 class="user-name"><?= htmlspecialchars($order['nama'] ?? 'NO-NAME') ?></h2>
                 <div class="user-iccid">
                     <span>ICCID: <?= htmlspecialchars($iccid) ?></span>
                 </div>
@@ -458,18 +883,32 @@ $csrf_token = generateCSRFToken();
                 <input type="hidden" name="create_payment" value="1">
                 
                 <div class="package-grid">
-                    <?php foreach ($topupPackages as $package): ?>
+                    <?php foreach ($topupPackages as $index => $package): ?>
                         <?php
                         $volumeGB = round((float)$package["volume"] / (1024**3), 1);
                         $originalPriceUsd = (float)$package["price"] / 10000;
                         $finalPrice = calculateFinalPrice($originalPriceUsd, $exchangeRate, $volumeGB, $markupConfig);
+                        
+                        // Simple icon logic
+                        $icon = 'fas fa-wifi';
+                        if ($volumeGB >= 5) {
+                            $icon = 'fas fa-signal';
+                        } elseif ($volumeGB >= 2) {
+                            $icon = 'fas fa-wifi';
+                        } else {
+                            $icon = 'fas fa-mobile-alt';
+                        }
                         ?>
                         <label class="package-card">
-                            <input type="radio" name="package_code" value="<?= $package['packageCode'] ?>">
+                            <input type="radio" name="package_code" value="<?= $package['packageCode'] ?>" 
+                                data-price="<?= $finalPrice ?>" onchange="updateTotal()">
                             <div class="package-content">
+                                <i class="package-icon <?= $icon ?>"></i>
                                 <div class="package-size"><?= $volumeGB ?> GB</div>
                                 <div class="package-name"><?= htmlspecialchars($package['name']) ?></div>
-                                <div class="package-price">Rp <?= number_format($finalPrice, 0, ',', '.') ?></div>
+                                <div class="package-price">
+                                    Rp <?= number_format((float) $finalPrice, 0, ',', '.') ?>
+                                </div>
                             </div>
                         </label>
                     <?php endforeach; ?>
@@ -479,24 +918,34 @@ $csrf_token = generateCSRFToken();
                     <div class="payment-group">
                         <h3>Payment Method</h3>
                         <div class="payment-methods">
-                            <?php foreach ($paymentMethods as $code => $method): ?>
-                            <label class="payment-method">
-                                <input type="radio" name="payment_method" value="<?= $code ?>">
+                            <div class="payment-method selected">
                                 <div class="payment-content">
-                                    <div class="payment-icon"><?= $method['icon'] ?></div>
+                                    <div class="payment-icon">
+                                        <i class="fas fa-qrcode"></i>
+                                    </div>
                                     <div class="payment-info">
-                                        <div class="payment-name"><?= $method['name'] ?></div>
-                                        <div class="payment-fee">Fee: Rp <?= number_format($method['fee'], 0, ',', '.') ?></div>
+                                        <div class="payment-name">QRIS Payment</div>
+                                        <div class="payment-fee">Kode Unik: +<?= $uniqueCodePreview ?></div>
+                                        <div class="payment-total" id="paymentTotal">
+                                            <i class="fas fa-calculator"></i>
+                                            Total: Pilih paket dulu
+                                        </div>
                                     </div>
                                 </div>
-                            </label>
-                            <?php endforeach; ?>
+                                <input type="hidden" name="payment_method" value="qris">
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Create Payment</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-credit-card"></i>
+                        <span class="btn-text">Lanjutkan Pembayaran</span>
+                        <span class="btn-loading" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Processing...
+                        </span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -506,74 +955,45 @@ $csrf_token = generateCSRFToken();
         <div class="payment-complete">
             <div class="payment-status pending">
                 <div class="status-icon">⏳</div>
-                <h2>Payment Pending</h2>
-                <p>Complete your payment below</p>
+                <h2>Menunggu Pembayaran (QRIS)</h2>
+                <p>Silakan scan QR di bawah & transfer sesuai nominal.</p>
+                <div class="auto-check-info">
+                    <div class="check-status" id="checkStatus">Checking payment status...</div>
+                    <div class="next-check">Next check in: <span id="countdown">10</span>s</div>
+                </div>
             </div>
-            
             <div class="order-info">
-                <div class="info-row">
-                    <span>Order ID:</span>
-                    <span><?= htmlspecialchars($paymentResult['order_id']) ?></span>
-                </div>
-                <div class="info-row">
-                    <span>Amount:</span>
-                    <span>Rp <?= number_format((float)$paymentResult['total_amount'], 0, ',', '.') ?></span>
+                <div class="info-row"><span>Order ID:</span><span><?= htmlspecialchars($paymentResult['order_id']) ?></span></div>
+                <div class="info-row"><span>Nominal Paket:</span><span>Rp <?= number_format((float)($paymentResult['base_amount']), 0, ',', '.') ?></span></div>
+                <div class="info-row"><span>Kode Unik:</span><span>+<?= $paymentResult['unique_code'] ?></span></div>
+                <div class="info-row"><span><b>Total Bayar:</b></span>
+                    <span class="total-amount">Rp <?= number_format((int) $paymentResult['total_amount'], 0, ',', '.') ?></span>
                 </div>
             </div>
-
-            <?php if (!empty($paymentResult['va_number'])): ?>
             <div class="payment-method-card">
-                <h3>🏦 Virtual Account</h3>
-                <div class="va-number">
-                    <span class="va-digits"><?= $paymentResult['va_number'] ?></span>
+                <h3>Scan QRIS:</h3>
+                <div class="qr-container">
+                    <img src="<?= $paymentResult['qr_code_url'] ?>" alt="QRIS" class="qr-image">
+                </div>
+                <div class="qr-info">
+                    Scan pakai aplikasi e-wallet (GoPay, DANA, OVO, dll)<br>
+                    <small>QR hanya berlaku <span id="expiredTimer"></span> menit</small>
                 </div>
             </div>
-            <?php endif; ?>
-
-            <?php if (!empty($paymentResult['payment_url'])): ?>
-            <div class="payment-method-card">
-                <h3>📱 QR Payment</h3>
-                <div class="payment-button-container">
-                    <a href="<?= htmlspecialchars($paymentResult['payment_url']) ?>" target="_blank" class="payment-btn-large">
-                        Open Payment
-                    </a>
-                </div>
-                
-                <?php if (!empty($paymentResult['qr_string'])): ?>
-                <div class="qr-section">
-                    <div class="qr-code">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= urlencode($paymentResult['qr_string']) ?>" alt="QR Code">
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
-            <!-- Cancel Payment -->
-            <div class="cancel-payment-section">
+            <button type="button" class="btn btn-success" onclick="manualCheck()">
+                <i class="fas fa-sync-alt"></i>
+                Cek Status Pembayaran
+            </button>
+            <div class="cancel-payment-section" style="margin-top:20px;">
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
                     <input type="hidden" name="order_id" value="<?= $paymentResult['order_id'] ?>">
                     <input type="hidden" name="cancel_payment" value="1">
                     <button type="submit" class="btn btn-danger" onclick="return confirm('Cancel payment?')">
-                        Cancel & Choose Another Package
+                        <i class="fas fa-times"></i>
+                        Batalkan
                     </button>
                 </form>
-            </div>
-
-            <!-- Status Checker -->
-            <div class="status-checker">
-                <div class="status-check-header">
-                    <h3>🔄 Payment Status</h3>
-                    <div class="auto-refresh">
-                        <span id="statusText">Checking payment status...</span>
-                        <div class="refresh-timer" id="refreshTimer">30</div>
-                    </div>
-                </div>
-                
-                <button onclick="checkPaymentStatus()" class="btn btn-secondary" id="checkStatusBtn">
-                    Check Status Now
-                </button>
             </div>
         </div>
 
@@ -582,127 +1002,149 @@ $csrf_token = generateCSRFToken();
         <div class="payment-complete">
             <div class="payment-status paid">
                 <div class="status-icon">🎉</div>
-                <h2>Topup Successful!</h2>
-                <p>Your eSIM has been topped up successfully</p>
+                <h2>Pembayaran Berhasil!</h2>
+                <p>Topup eSIM telah berhasil diproses</p>
             </div>
             
             <div class="success-details">
                 <div class="success-card">
-                    <h3>✅ Topup Complete</h3>
+                    <h3>✅ Payment Complete</h3>
                     <div class="success-info">
-                        <div class="info-row">
-                            <span>Package:</span>
-                            <span><?= htmlspecialchars($paymentResult['package_name']) ?></span>
-                        </div>
                         <div class="info-row">
                             <span>Order ID:</span>
                             <span><?= htmlspecialchars($paymentResult['order_id']) ?></span>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="action-buttons">
-                <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-primary">View eSIM Details</a>
-                <a href="topup.php?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-secondary">Add More Data</a>
-            </div>
-        </div>
-
-        <?php elseif ($currentStep === 'topup_failed'): ?>
-        <!-- FAILED - SIMPLE VERSION TANPA DB CHANGES -->
-        <div class="payment-complete">
-            <div class="payment-status" style="background: linear-gradient(135deg, #ef4444, #ff6b6b);">
-                <div class="status-icon">⚠️</div>
-                <h2>Topup Process Failed</h2>
-                <p>Your payment was successful, but the topup process encountered an issue.</p>
-            </div>
-            
-            <div class="failure-card">
-                <h3>❌ Topup Status: PROCESSING FAILED</h3>
-                <div class="failure-explanation">
-                    <div class="explanation-header">
-                        <p>What happened?</p>
-                    </div>
-                    
-                    <div class="status-steps">
-                        <div class="status-step success">
-                            <div class="step-icon">✅</div>
-                            <div class="step-text">Your payment was successfully processed</div>
-                        </div>
-                        
-                        <div class="status-step failed">
-                            <div class="step-icon">❌</div>
-                            <div class="step-text">The eSIM topup process failed due to technical issues</div>
-                        </div>
-                        
-                        <div class="status-step processing">
-                            <div class="step-icon">🔄</div>
-                            <div class="step-text">Our team will process this manually within 1-24 hours</div>
-                        </div>
-                    </div>
-                    
-                    <div class="reassurance-message">
-                        <div class="message-icon">💡</div>
-                        <div class="message-text">
-                            <strong>No action needed from you!</strong> We'll automatically retry the topup process.
+                        <div class="info-row">
+                            <span>Total Bayar:</span>
+                            <span>Rp <?= number_format((int) $paymentResult['total_amount'], 0, ',', '.') ?></span>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="action-buttons">
-                <!-- TOMBOL BANTUAN WA - GANTI NOMOR SESUAI KEBUTUHAN -->
-                <a href="https://wa.me/6281325525646?text=Hi%2C%20butuh%20bantuan%20order%20<?= urlencode($paymentResult['order_id']) ?>%20-%20payment%20sukses%20tapi%20topup%20gagal.%20Mohon%20diproses%20manual.%20Terima%20kasih." 
-                target="_blank" 
-                class="btn btn-success">
-                    📱 Contact Support WhatsApp
-                </a>
                 
-                <!-- TOMBOL KEMBALI SIMPLE -->
-                <?php if (!empty($token)): ?>
-                    <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-secondary">
-                        🔙 Back to eSIM Details
-                    </a>
-                <?php elseif (!empty($iccid)): ?>
-                    <a href="javascript:history.back()" class="btn btn-secondary">
-                        🔙 Go Back
-                    </a>
+                <?php 
+                // ✅ SHOW TOPUP RESULT
+                $stmt = $pdo->prepare("SELECT topup_processed, topup_result, esim_transaction_id FROM qris_payments WHERE order_id = ?");
+                $stmt->execute([$paymentResult['order_id']]);
+                $topupInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($topupInfo && $topupInfo['topup_processed'] == 1):
+                    $topupResult = json_decode($topupInfo['topup_result'], true);
+                ?>
+                <div class="success-card">
+                    <?php if (isset($topupResult['success']) && $topupResult['success']): ?>
+                        <h3>📊 Topup Successful</h3>
+                        <div class="success-info">
+                            <div class="info-row">
+                                <span>Topup Status:</span>
+                                <span style="color: var(--success-color);">✅ Completed</span>
+                            </div>
+                            <?php if ($topupInfo['esim_transaction_id']): ?>
+                            <div class="info-row">
+                                <span>Topup Transaction:</span>
+                                <span><?= htmlspecialchars($topupInfo['esim_transaction_id']) ?></span>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <!-- ✅ UBAH BAGIAN INI - SEMBUNYIKAN ERROR DETAIL -->
+                        <h3>⚠️ Topup Processing</h3>
+                        <div class="success-info">
+                            <div class="info-row">
+                                <span>Topup Status:</span>
+                                <span style="color: #ff9800;">⏳ Pending Manual Process</span>
+                            </div>
+                        </div>
+                        <p style="text-align: center; margin: 20px 0;">
+                            <i class="fas fa-info-circle" style="color: #2196F3;"></i><br>
+                            <strong>Pembayaran berhasil!</strong><br>
+                            Topup sedang diproses manual oleh admin kami.<br>
+                            <small>Estimasi: 1-24 jam</small>
+                        </p>
+                    <?php endif; ?>
+                </div>
                 <?php else: ?>
-                    <a href="index.php" class="btn btn-secondary">
-                        🏠 Back to Home
-                    </a>
+                <div class="success-card">
+                    <h3>⏳ Processing Topup</h3>
+                    <p>Topup sedang diproses otomatis. Refresh halaman ini dalam beberapa detik.</p>
+                    <button onclick="window.location.reload()" class="btn btn-secondary">🔄 Refresh</button>
+                </div>
                 <?php endif; ?>
             </div>
             
-            <!-- INFO BANTUAN -->
-            <div class="support-info">
-                <div class="info-card">
-                    <h4>🆘 Need Immediate Help?</h4>
-                    <div class="support-channels">
-                        <div class="support-item">
-                            <strong>📱 WhatsApp:</strong> +62 813-2552-5646
-                        </div>
-                        <div class="support-item">
-                            <strong>📧 Email:</strong> support@hanisyaastore.com
-                        </div>
-                    </div>
-                    <div class="support-note">
-                        <p><small>💡 <strong>Tip:</strong> Include your Order ID when contacting support for faster assistance.</small></p>
-                    </div>
-                </div>
+            <div class="action-buttons">
+                <?php 
+                // ✅ SIMPLIFIKASI LOGIC - JIKA ADA MASALAH TOPUP = CONTACT ADMIN
+                $hasTopupIssue = false;
+                if ($topupInfo && $topupInfo['topup_processed'] == 1) {
+                    $topupResult = json_decode($topupInfo['topup_result'], true);
+                    $hasTopupIssue = !isset($topupResult['success']) || !$topupResult['success'];
+                } else {
+                    $hasTopupIssue = true; // Belum diproses = ada issue
+                }
+                ?>
+                
+                <?php if ($hasTopupIssue): ?>
+                    <!-- ✅ HANYA TAMPILKAN BUTTON WA UNTUK ADMIN -->
+                    <a href="https://wa.me/6281325525646?text=Halo%20admin%2C%20saya%20sudah%20bayar%20topup%20eSIM%20dengan%20Order%20ID%3A%20<?= urlencode($paymentResult['order_id']) ?>%20tapi%20topup%20belum%20masuk.%20Mohon%20diproses%20manual.%20Terima%20kasih." 
+                    class="btn btn-success" target="_blank">
+                        <i class="fab fa-whatsapp"></i>
+                        Contact Admin for Manual Topup
+                    </a>
+                    
+                    <?php if (!empty($token)): ?>
+                    <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-secondary">
+                        <i class="fas fa-eye"></i>
+                        Check eSIM Status
+                    </a>
+                    <?php else: ?>
+                    <!-- <a href="index.php" class="btn btn-secondary">Back to Home</a> -->
+                    <?php endif; ?>
+                    
+                <?php else: ?>
+                    <!-- ✅ JIKA TOPUP SUKSES - TAMPILKAN NORMAL BUTTONS -->
+                    <?php if (!empty($token)): ?>
+                    <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-primary">
+                        <i class="fas fa-eye"></i>
+                        View eSIM Details
+                    </a>
+                    <a href="topup.php?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i>
+                        Add More Data
+                    </a>
+                    <?php else: ?>
+                    <a href="index.php" class="btn btn-primary">Back to Home</a>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php elseif ($currentStep === 'payment_expired'): ?>
+        <!-- EXPIRED -->
+        <div class="payment-complete">
+            <div class="payment-status expired">
+                <div class="status-icon">⏰</div>
+                <h2>QRIS Kadaluarsa</h2>
+                <p>Kode pembayaran telah kadaluarsa setelah 3 menit.</p>
             </div>
             
-            <!-- STATUS REFRESH WARNING -->
-            <div class="warning-info">
-                <div class="warning-card">
-                    <p>⚠️ <strong>Note:</strong> This order has failed and cannot be changed. Please contact support if you believe this is an error.</p>
-                </div>
+            <div class="action-buttons">
+                <?php if (!empty($token) && !empty($iccid)): ?>
+                <a href="topup.php?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-primary">Generate QRIS Baru</a>
+                <?php else: ?>
+                <a href="index.php" class="btn btn-primary">Back to Home</a>
+                <?php endif; ?>
             </div>
+        </div>
+
+        <?php else: ?>
+        <!-- FALLBACK -->
+        <div class="alert alert-warning"><br>
+            <a href="index.php" class="btn btn-primary">Back to Home</a>
         </div>
         <?php endif; ?>
 
         <footer class="footer">
-            <p>&copy; <?= date('Y') ?> eSIM Portal</p>
+            <p>&copy; <?= date('Y') ?> eSIM Portal - Powered by Mimint</p>
         </footer>
     </div>
 
@@ -710,9 +1152,11 @@ $csrf_token = generateCSRFToken();
         window.topupData = {
             currentStep: '<?= $currentStep ?>',
             orderId: '<?= $paymentResult['order_id'] ?? '' ?>',
-            csrf_token: '<?= $csrf_token ?>'
+            csrf_token: '<?= $csrf_token ?>',
+            uniqueCode: <?= $uniqueCodePreview ?>,
+            expiredAt: '<?= $paymentResult['expired_at'] ?? '' ?>'
         };
     </script>
-    <script src="assets/js/topup.js"></script>
+    <script src="assets/js/topup.js?v=<?= filemtime('assets/js/topup.js') ?>"></script>
 </body>
 </html>
