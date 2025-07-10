@@ -1,7 +1,7 @@
 <?php
 // Secure QR code generator
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 
 // Validate and sanitize input
 $data = filter_input(INPUT_GET, 'data', FILTER_SANITIZE_STRING);

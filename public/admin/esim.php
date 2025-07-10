@@ -5,10 +5,9 @@ ini_set('display_errors', '0');
 // Secure admin dashboard
 define('ALLOWED_ACCESS', true);
 // BARU include config, supaya function2 tersedia
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 
-securityMiddleware();
-setSecurityHeaders();
+
 
 // Check if not logged in, redirect to login page
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
@@ -23,11 +22,11 @@ if (!isset($_SESSION['last_session_regenerate']) || (time() - $_SESSION['last_se
     $_SESSION['last_session_regenerate'] = time();
 }
 
-// Include required files with error handling
+// Include required files
 try {
-    include '../includes/koneksi.php';
-    include '../includes/api.php';
-    include '../includes/functions.php';
+    require_once __DIR__ . '/../../src/includes/koneksi.php'; // Naik satu level, lalu masuk ke src/includes
+    require_once __DIR__ . '/../../src/includes/functions.php';
+    require_once __DIR__ . '/../../src/includes/api.php';;
 } catch (Exception $e) {
     error_log("Failed to include required files in admin/esim.php: " . $e->getMessage());
     die("System error. Please try again later.");

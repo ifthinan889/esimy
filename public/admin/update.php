@@ -3,12 +3,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Jalankan: php bulk_update_esim_cli.php [--delay=0.8] [--filter=PENDING,UNKNOWN]
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/../config.php';
-include '../includes/koneksi.php';
-include '../includes/functions.php';
-include '../includes/api.php';
+require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../src/includes/koneksi.php'; // Naik satu level, lalu masuk ke src/includes
+require_once __DIR__ . '/../../src/includes/functions.php';
+require_once __DIR__ . '/../../src/includes/api.php';
 
 function updateEsimDataFromApi($pdo, $orderNo, $iccid = '') {
     try {

@@ -1,7 +1,7 @@
 <?php
 // Secure admin logout
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 
 // Log the logout event if user was logged in
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {

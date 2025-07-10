@@ -1,0 +1,467 @@
+[2025-07-10 22:18:59] response: {
+    "endpoint": "\/balance\/query",
+    "postData": [],
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "balance": 2660200
+        }
+    }
+}
+
+[2025-07-10 22:19:02] response: {
+    "endpoint": "\/balance\/query",
+    "postData": [],
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "balance": 2660200
+        }
+    }
+}
+
+[2025-07-10 22:19:08] response: {
+    "endpoint": "\/esim\/order",
+    "postData": {
+        "transactionId": "ORD_250710221907_5FA836_1",
+        "packageInfoList": [
+            {
+                "packageCode": "PFRQ8FIBC",
+                "count": 1,
+                "price": 3000
+            }
+        ],
+        "amount": 3000
+    },
+    "httpCode": 200,
+    "response": {
+        "errorCode": null,
+        "errorMsg": null,
+        "success": true,
+        "obj": {
+            "orderNo": "B25071015190003",
+            "transactionId": "ORD_250710221907_5FA836_1"
+        }
+    }
+}
+
+[2025-07-10 22:19:10] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
+[2025-07-10 22:27:32] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "8910300000015996513",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
+[2025-07-10 22:28:07] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "8910300000015996513",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
+[2025-07-10 22:28:18] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "8910300000015996513",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
+[2025-07-10 22:28:31] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "8910300000015996513",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+
+[2025-07-10 22:29:13] response: {
+    "endpoint": "\/esim\/query",
+    "postData": {
+        "orderNo": "B25071015190003",
+        "iccid": "8910300000015996513",
+        "esimTranNo": "",
+        "pager": {
+            "pageNum": 1,
+            "pageSize": 20
+        }
+    },
+    "httpCode": 200,
+    "response": {
+        "success": true,
+        "errorCode": "0",
+        "errorMsg": null,
+        "obj": {
+            "esimList": [
+                {
+                    "esimTranNo": "25071015190003",
+                    "orderNo": "B25071015190003",
+                    "transactionId": "ORD_250710221907_5FA836_1",
+                    "imsi": "260012161200142",
+                    "iccid": "8910300000015996513",
+                    "smsStatus": 0,
+                    "msisdn": "",
+                    "ac": "LPA:1$rsp-eu.simlessly.com$7614113FD3814F759725F0BB6F159A30",
+                    "qrCodeUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c.png",
+                    "shortUrl": "https:\/\/p.qrsim.net\/c644101b87454c138fe2afa164dbf06c",
+                    "smdpStatus": "RELEASED",
+                    "eid": "",
+                    "activeType": 1,
+                    "dataType": 1,
+                    "activateTime": null,
+                    "expiredTime": "2026-01-06T15:19:08+0000",
+                    "installationTime": null,
+                    "totalVolume": 104857600,
+                    "totalDuration": 7,
+                    "durationUnit": "DAY",
+                    "orderUsage": 0,
+                    "esimStatus": "GOT_RESOURCE",
+                    "pin": "2209",
+                    "puk": "14329357",
+                    "apn": "internet",
+                    "ipExport": "NL\/FR\/US",
+                    "supportTopUpType": 2,
+                    "fupPolicy": "",
+                    "packageList": [
+                        {
+                            "packageName": "Albania 100MB 7Days",
+                            "packageCode": "PFRQ8FIBC",
+                            "slug": "AL_0.1_7",
+                            "duration": 7,
+                            "volume": 104857600,
+                            "locationCode": "AL",
+                            "createTime": "2025-07-10T15:19:08+0000"
+                        }
+                    ]
+                }
+            ],
+            "pager": {
+                "pageSize": 20,
+                "pageNum": 1,
+                "total": 1
+            }
+        }
+    }
+}
+

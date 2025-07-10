@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php include 'includes/navigation.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/navigation.php'; ?>
 
 <main class="main-content">
     <!-- Hero Section -->
@@ -440,7 +440,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </main>
 
 <!-- Footer -->
-<?php include 'includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
 <script src="assets/js/contact.js?v=<?= time() ?>"></script>

@@ -1,10 +1,11 @@
 <?php
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/../config.php';
+// KODE YANG BENAR
+require_once __DIR__ . '/../../config.php';
 
 try {
-    include '../includes/koneksi.php';
-    include '../includes/functions.php';
+    require_once __DIR__ . '/../../src/includes/koneksi.php'; // Naik satu level, lalu masuk ke src/includes
+    require_once __DIR__ . '/../../src/includes/functions.php';;
 } catch (Exception $e) {
     error_log("Failed to include required files: " . $e->getMessage());
     die("System error. Please try again later.");

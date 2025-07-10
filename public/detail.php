@@ -7,7 +7,7 @@
 define('ALLOWED_ACCESS', true);
 
 // Include core files
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php';
 
 // Start session securely
 if (session_status() === PHP_SESSION_NONE) {
@@ -16,9 +16,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Include required files
 try {
-    include 'includes/koneksi.php';
-    include 'includes/functions.php';
-    include 'includes/api.php';
+    require_once __DIR__ . '/../src/includes/koneksi.php'; // Naik satu level, lalu masuk ke src/includes
+    require_once __DIR__ . '/../src/includes/functions.php';
+    require_once __DIR__ . '/../src/includes/api.php';
 } catch (Exception $e) {
     error_log("Failed to include required files: " . $e->getMessage());
     include 'error.php';
@@ -268,7 +268,7 @@ if (!empty($ac)) {
 $isNewEsim = ($esimStatus === "GOT_RESOURCE");
 
 if ($isNewEsim) {
-    $qrCodeUrl = "includes/generate_qr.php?data=" . urlencode($ca);
+    $qrCodeUrl = "/../src/includes/generate_qr.php?data=" . urlencode($ca);
 } else {
     $totalKuotaGB = isset($esim["totalVolume"]) ? round($esim["totalVolume"] / (1024**3), 2) : 0;
     $sisaKuotaGB = max(0, $totalKuotaGB - $orderUsage);

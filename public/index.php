@@ -1,7 +1,7 @@
 <?php
 // Define allowed access for includes
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php';
 setSecurityHeaders();
 // Start session securely
 if (session_status() === PHP_SESSION_NONE) {
@@ -10,11 +10,11 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Include required files
 try {
-    include 'includes/koneksi.php';
-    include 'includes/functions.php';        // Basic functions (existing)
-    include 'includes/order_functions.php';  // NEW - Order related
-    include 'includes/payment_functions.php'; // NEW - Payment related
-    include 'includes/api.php';              // API functions (existing)
+    require_once __DIR__ . '/../src/includes/koneksi.php';
+    require_once __DIR__ . '/../src/includes/functions.php';        // Basic functions (existing)
+    require_once __DIR__ . '/../src/includes/order_functions.php';  // NEW - Order related
+    require_once __DIR__ . '/../src/includes/payment_functions.php'; // NEW - Payment related
+    require_once __DIR__ . '/../src/includes/api.php';              // API functions (existing)
 } catch (Exception $e) {
     error_log("Failed to include required files: " . $e->getMessage());
     die("System error. Please try again later.");
@@ -570,7 +570,7 @@ function parseCountriesFromLocation($locationName) {
 </button>
 
 <!-- Navigation -->
-<?php include 'includes/navigation.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/navigation.php'; ?>
 
 <!-- Main Content -->
 <main class="main-content">
@@ -817,7 +817,7 @@ function parseCountriesFromLocation($locationName) {
 </main>
 
 <!-- Footer -->
-<?php include 'includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/footer.php'; ?>
 
 <!-- Country Modal -->
 <div id="countryModal" class="modal">

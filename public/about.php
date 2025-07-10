@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php include 'includes/navigation.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/navigation.php'; ?>
 
 <!-- Main Content -->
 <main class="main-content">
@@ -259,7 +259,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </main>
 
 <!-- Footer -->
-<?php include 'includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
 <script src="assets/js/about.js?v=<?= time() ?>"></script>

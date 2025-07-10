@@ -1,63 +1,12 @@
-# eSIM Store - Clean URL Configuration
+# Mengaktifkan mesin rewrite URL
 RewriteEngine On
 
-# Security: Block access to sensitive files
-<Files ~ "^\.">
-    Order allow,deny
-    Deny from all
-</Files>
+# Menentukan direktori dasar (root) dari aplikasi Anda
+RewriteBase /
 
-# Block access to config files
-<FilesMatch "\.(env|ini|log|conf)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Remove .php extension from URLs
-RewriteCond %{REQUEST_FILENAME} !-d
+# Mengabaikan file yang benar-benar ada di server
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^([^\.]+)$ $1.php [L]
+RewriteCond %{REQUEST_FILENAME} !-d
 
-# Specific clean URL mappings
-RewriteRule ^about/?$ about.php [L]
-RewriteRule ^contact/?$ contact.php [L]
-RewriteRule ^terms/?$ terms.php [L]
-RewriteRule ^privacy/?$ privacy.php [L]
-RewriteRule ^refund/?$ refund.php [L]
-
-# Handle trailing slashes
-RewriteRule ^([^/]+)/$ /$1 [R=301,L]
-
-# Security headers
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options DENY
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-</IfModule>
-
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain
-    AddOutputFilterByType DEFLATE text/html
-    AddOutputFilterByType DEFLATE text/xml
-    AddOutputFilterByType DEFLATE text/css
-    AddOutputFilterByType DEFLATE application/xml
-    AddOutputFilterByType DEFLATE application/xhtml+xml
-    AddOutputFilterByType DEFLATE application/rss+xml
-    AddOutputFilterByType DEFLATE application/javascript
-    AddOutputFilterByType DEFLATE application/x-javascript
-</IfModule>
-
-# Cache control
-<IfModule mod_expires.c>
-    ExpiresActive on
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType image/png "access plus 1 month"
-    ExpiresByType image/jpg "access plus 1 month"
-    ExpiresByType image/jpeg "access plus 1 month"
-    ExpiresByType image/gif "access plus 1 month"
-    ExpiresByType image/svg+xml "access plus 1 month"
-</IfModule>
+# Mengarahkan semua permintaan lain ke index.php
+RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
