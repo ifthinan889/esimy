@@ -3,11 +3,6 @@
 define('ALLOWED_ACCESS', true);
 require_once __DIR__ . '/../config.php';
 
-// Initialize session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Log the logout event if user was logged in
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     $username = $_SESSION['admin_username'] ?? 'unknown';

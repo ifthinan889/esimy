@@ -2,23 +2,7 @@
 error_reporting(0);
 ini_set('display_errors', '0');
 define('ALLOWED_ACCESS', true);
-
-// Session setup
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-if (session_status() === PHP_SESSION_NONE) session_start();
-
 require_once __DIR__ . '/../config.php';
-
-securityMiddleware();
-setSecurityHeaders();
-
 try {
     include '../includes/koneksi.php';
     include '../includes/functions.php';

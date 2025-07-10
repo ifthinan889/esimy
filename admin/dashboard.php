@@ -3,27 +3,16 @@ error_reporting(0);
 ini_set('display_errors', '0');
 // Secure admin dashboard
 define('ALLOWED_ACCESS', true);
-
-// Session setup SELALU sebelum output atau include lain!
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-// BARU include config, supaya function2 tersedia
 require_once __DIR__ . '/../config.php';
 
-// Setelah include config.php, BOLEH panggil function helper seperti setSecurityHeaders() dan securityMiddleware()
-// (tapi jangan duplicate header yang sudah di-set manual di atas)
-// Kalau header udah di-set manual, TIDAK PERLU panggil setSecurityHeaders() lagi.
+// // --- KODE DEBUGGING (MATA-MATA) ---
+// echo '<pre>';
+// echo 'ID Session Saat Ini: ' . session_id() . "\n";
+// echo "Isi dari \$_SESSION:\n";
+// print_r($_SESSION);
+// echo '</pre>';
+// die();
 
-securityMiddleware();
-setSecurityHeaders();
 // Include required files
 try {
     include '../includes/koneksi.php';
@@ -77,7 +66,7 @@ try {
     // eSIM Expired/Depleted - sudah habis atau kadaluarsa
     $expiredOrdersStmt = $pdo->query("
         SELECT COUNT(*) as total FROM esim_orders 
-        WHERE esim_status IN ('EXPIRED', 'DEPLETED')
+        WHERE esim_status IN ('USED_EXPIRED', 'EXPIRED')
     ");
     $expiredOrders = $expiredOrdersStmt->fetchColumn();
     

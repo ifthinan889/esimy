@@ -10,8 +10,185 @@ let currentFilters = {
     sortOrder: 'relevance'
 };
 
+// Pagination variables
+let currentPage = 1;
+const itemsPerPage = 6; // Tampilkan 20 package per halaman
+let isLoading = false;
+let filteredPackagesCache = []; // Cache hasil filter
+let currentDisplayedPackages = []; // Package yang sedang ditampilkan
+
 // Filter visibility state
 let filtersVisible = false; // Default hidden
+
+// Pagination Helper Functions
+function resetPagination() {
+    currentPage = 1;
+    currentDisplayedPackages = [];
+    isLoading = false;
+    
+    // Remove existing load more button
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+}
+
+// Update function showLoadMoreButton
+function showLoadMoreButton(totalPackages, currentDisplayed) {
+    // Remove existing button first
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+    
+    // Only show if there are more packages to load
+    if (currentDisplayed < totalPackages) {
+        const packagesDiv = document.getElementById('packagesList');
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.id = 'loadMoreBtn';
+        loadMoreBtn.className = 'load-more-btn';
+        
+        const remaining = totalPackages - currentDisplayed;
+        const nextBatch = Math.min(itemsPerPage, remaining);
+        
+        loadMoreBtn.innerHTML = `
+            <span class="load-more-icon">📦</span>
+            <span class="load-more-text">Load ${nextBatch} More (${remaining} left)</span>
+        `;
+        
+        loadMoreBtn.onclick = function() {
+            loadMorePackages();
+        };
+        
+        // Append ke packages grid (BUKAN ke body)
+        packagesDiv.appendChild(loadMoreBtn);
+    }
+}
+
+// Update hideLoadMoreButton
+function hideLoadMoreButton() {
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.classList.add('hidden');
+        setTimeout(() => {
+            existingBtn.remove();
+        }, 300);
+    }
+}
+
+// Update function showLoadingState
+function showLoadingState() {
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.disabled = true;
+        existingBtn.classList.add('loading');
+        existingBtn.innerHTML = `
+            <span class="loading-spinner"></span>
+            <span class="load-more-text">Loading awesome packages...</span>
+        `;
+    }
+}
+
+// Update function loadMorePackages
+function loadMorePackages() {
+    if (isLoading) return;
+    
+    isLoading = true;
+    showLoadingState();
+    
+    // Simulate loading delay for smooth UX
+    setTimeout(() => {
+        currentPage++;
+        renderPackagesPage(filteredPackagesCache, false); // false = append, don't clear
+        isLoading = false;
+        
+        // Add success feedback
+        const btn = document.getElementById('loadMoreBtn');
+        if (btn && !btn.disabled) {
+            btn.classList.add('success');
+            setTimeout(() => {
+                btn.classList.remove('success');
+            }, 600);
+        }
+    }, 800); // Slightly longer delay for better UX
+}
+
+function hideLoadMoreButton() {
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+}
+
+function showLoadingState() {
+    const existingBtn = document.getElementById('loadMoreBtn');
+    if (existingBtn) {
+        existingBtn.disabled = true;
+        existingBtn.innerHTML = `
+            <span class="loading-spinner"></span>
+            <span class="load-more-text">Loading...</span>
+        `;
+    }
+}
+
+function loadMorePackages() {
+    if (isLoading) return;
+    
+    isLoading = true;
+    showLoadingState();
+    
+    // Simulate loading delay for smooth UX
+    setTimeout(() => {
+        currentPage++;
+        renderPackagesPage(filteredPackagesCache, false); // false = append, don't clear
+        isLoading = false;
+    }, 300);
+}
+
+function renderPackagesPage(packages, clearFirst = true) {
+    const packagesDiv = document.getElementById('packagesList');
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pagePackages = packages.slice(startIndex, endIndex);
+    
+    console.log(`Rendering page ${currentPage}: ${startIndex} to ${endIndex} of ${packages.length} packages`);
+    
+    if (clearFirst) {
+        // Clear existing content untuk halaman pertama
+        packagesDiv.innerHTML = '';
+        currentDisplayedPackages = [];
+        hideLoadMoreButton();
+    }
+    
+    // Render packages dengan slight delay untuk smooth animation
+    pagePackages.forEach((pkg, index) => {
+        setTimeout(() => {
+            const packageElement = document.createElement('div');
+            packageElement.innerHTML = renderPackage(pkg, currentFilters.searchQuery);
+            const packageCard = packageElement.firstElementChild;
+            
+            // Add fade-in animation
+            packageCard.style.opacity = '0';
+            packageCard.style.transform = 'translateY(20px)';
+            packagesDiv.appendChild(packageCard);
+            
+            // Trigger animation
+            setTimeout(() => {
+                packageCard.style.transition = 'all 0.3s ease';
+                packageCard.style.opacity = '1';
+                packageCard.style.transform = 'translateY(0)';
+            }, 50);
+            
+            currentDisplayedPackages.push(pkg);
+            
+        }, index * 20); // 20ms delay antar item untuk smooth loading
+    });
+    
+    // Show load more button after all items are rendered
+    setTimeout(() => {
+        showLoadMoreButton(packages.length, currentDisplayedPackages.length);
+    }, pagePackages.length * 20 + 100);
+}
 
 // Dark mode functionality
 function initTheme() {
@@ -432,13 +609,6 @@ function renderPackage(pkg, query = '') {
         const locationText = pkg.location_name || pkg.location_code;
         const shortLocation = locationText.length > 20 ? locationText.substring(0, 20) + '...' : locationText;
         locationDisplay = `
-            <div class="package-info-item">
-                <div class="package-info-icon">📍</div>
-                <div class="package-info-content">
-                    <span class="package-info-label">Location</span>
-                    <span class="package-info-value">${shortLocation}</span>
-                </div>
-            </div>
         `;
     }
     
@@ -455,15 +625,6 @@ function renderPackage(pkg, query = '') {
                     ${tiktokBadge}
                 </div>
                 
-                <div class="package-info">
-                    <div class="package-info-item">
-                        <div class="package-info-icon">📊</div>
-                        <div class="package-info-content">
-                            <span class="package-info-label">Data</span>
-                            <span class="package-info-value">${formatBytes(parseInt(pkg.volume))}</span>
-                        </div>
-                    </div>
-                    
                     <div class="package-info-item">
                         <div class="package-info-icon">⚡</div>
                         <div class="package-info-content">
@@ -483,14 +644,6 @@ function renderPackage(pkg, query = '') {
                         </div>
                     </div>
                     ` : ''}
-                    
-                    <div class="package-info-item">
-                        <div class="package-info-icon">💰</div>
-                        <div class="package-info-content">
-                            <span class="package-info-label">Price</span>
-                            <span class="package-info-value price">Rp ${priceFormatted}</span>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="package-actions">
@@ -863,10 +1016,43 @@ function resetAllFilters() {
     const searchClear = document.getElementById('searchClear');
     searchClear.style.display = 'none';
     
+    // Reset pagination - TAMBAH INI
+    resetPagination();
+    
     filterPackages();
 }
 
+// Di bagian keyboard shortcuts, tambahkan:
+document.addEventListener('keydown', function(e) {
+    // ESC to close modals
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+    
+    // Ctrl/Cmd + K to focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }
+    
+    // Ctrl/Cmd + D to toggle dark mode
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        toggleTheme();
+    }
+    
+    // TAMBAH INI: Space atau Enter untuk load more (jika tombol visible dan focused)
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.id === 'loadMoreBtn') {
+        e.preventDefault();
+        loadMorePackages();
+    }
+});
+
 // Main filter function
+// Main filter function - MODIFIED untuk pagination
 function filterPackages() {
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
     const sortOrder = document.getElementById('sortOrder').value;
@@ -919,29 +1105,23 @@ function filterPackages() {
 
     // Sort packages
     filteredPackages = sortPackages(filteredPackages, currentFilters.sortOrder, query);
+    
+    // Cache filtered results
+    filteredPackagesCache = filteredPackages;
 
-    // Display results
+    // Display results with pagination
     if (filteredPackages.length > 0) {
         packagesDiv.style.display = 'grid';
         noResultsDiv.style.display = 'none';
         
-        packagesDiv.innerHTML = filteredPackages.map(pkg => renderPackage(pkg, query)).join('');
-        
-        // Add staggered animation to package items
-        const packageItems = packagesDiv.querySelectorAll('.package-item');
-        packageItems.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                item.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-                item.style.opacity = '1';
-                item.style.transform = 'translateY(0)';
-            }, index * 50);
-        });
+        // Reset pagination and render first page
+        resetPagination();
+        renderPackagesPage(filteredPackages, true);
         
     } else {
         packagesDiv.style.display = 'none';
         noResultsDiv.style.display = 'block';
+        hideLoadMoreButton();
         
         let noResultsMessage = `<div class="empty-icon">🔍</div><h3 class="empty-title">No packages found</h3>`;
         

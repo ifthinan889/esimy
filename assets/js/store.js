@@ -113,9 +113,7 @@ function initializeTheme() {
     const themeIcon = document.getElementById('themeIcon');
     
     html.setAttribute('data-theme', savedTheme);
-    if (themeIcon) {
-        themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    }
+    themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
@@ -131,14 +129,12 @@ function toggleTheme() {
     
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    if (themeIcon) {
-        themeIcon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-        
-        themeIcon.style.transform = 'rotate(360deg) scale(1.2)';
-        setTimeout(() => {
-            themeIcon.style.transform = '';
-        }, 300);
-    }
+    themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    
+    themeIcon.style.transform = 'rotate(360deg) scale(1.2)';
+    setTimeout(() => {
+        themeIcon.style.transform = '';
+    }, 300);
 }
 
 // ===========================================
@@ -284,9 +280,9 @@ function showCountrySelection() {
     const noResultsDiv = document.getElementById('noResults');
     const filtersSection = document.querySelector('.filter-section');
     
-    if (packagesDiv) packagesDiv.style.display = 'none';
-    if (filtersSection) filtersSection.style.display = 'none';
-    if (noResultsDiv) noResultsDiv.style.display = 'block';
+    packagesDiv.style.display = 'none';
+    filtersSection.style.display = 'none';
+    noResultsDiv.style.display = 'block';
     
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -308,9 +304,7 @@ function showCountrySelection() {
 
 function hideCountrySelection() {
     const noResultsDiv = document.getElementById('noResults');
-    if (noResultsDiv) {
-        noResultsDiv.style.display = 'none';
-    }
+    noResultsDiv.style.display = 'none';
 }
 
 function showPackageFilters() {
@@ -352,7 +346,6 @@ function showBackButton() {
     }
     
     const filtersSection = document.querySelector('.filter-section');
-    if (!filtersSection) return;
     
     const backButton = document.createElement('div');
     backButton.className = 'back-button';
@@ -400,7 +393,6 @@ function renderCountrySelection() {
     selectedCountry = null;
     
     const noResultsDiv = document.getElementById('noResults');
-    if (!noResultsDiv) return;
     
     console.log('Data summary:', {
         countries: allCountries.length,
@@ -688,17 +680,22 @@ function goBackToCountrySelection() {
     }
     
     // Reset search
-    resetSearchState();
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
+        searchInput.value = '';
         searchInput.placeholder = 'Search countries (e.g., Indonesia, Singapore, Malaysia)';
+    }
+    
+    const searchClear = document.getElementById('searchClear');
+    if (searchClear) {
+        searchClear.style.display = 'none';
     }
     
     // Hide packages and filters
     const packagesDiv = document.getElementById('packagesList');
     const filtersSection = document.querySelector('.filter-section');
-    if (packagesDiv) packagesDiv.style.display = 'none';
-    if (filtersSection) filtersSection.style.display = 'none';
+    packagesDiv.style.display = 'none';
+    filtersSection.style.display = 'none';
     
     // Show country selection with correct tab
     showCountrySelection();
@@ -765,7 +762,6 @@ function showAllDestinations() {
     console.log('📋 Showing all destinations');
     
     const noResultsDiv = document.getElementById('noResults');
-    if (!noResultsDiv) return;
     
     let html = `
         <div class="country-selection">
@@ -836,20 +832,9 @@ function filterCountries(query) {
     const totalResults = filteredCountries.length + filteredRegions.length + filteredGlobals.length;
     
     const noResultsDiv = document.getElementById('noResults');
-    if (!noResultsDiv) return;
     
     if (totalResults > 0) {
         let html = `
-            <div class="country-selection">
-                <div class="search-results-header">
-                    <h2 class="search-results-title">Search Results for "${query}"</h2>
-                    <p class="search-results-subtitle">Found ${totalResults} destinations</p>
-                    <button class="btn-back" onclick="renderCountrySelection()" style="margin-top: 1rem;">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Back to Categories</span>
-                    </button>
-                </div>
-                <div class="country-groups">
         `;
         
         if (filteredCountries.length > 0) {
@@ -893,13 +878,18 @@ function filterCountries(query) {
 }
 
 // ===========================================
+// Sisanya tetap sama seperti sebelumnya...
+// ===========================================
+
+// Loading & Error States, Event Listeners, Filter Functions, Helper Functions, 
+// Modal Functions, Copy Functions - semuanya tetap sama seperti kode sebelumnya
+
+// ===========================================
 // LOADING & ERROR STATES
 // ===========================================
 
 function showLoadingState() {
    const noResultsDiv = document.getElementById('noResults');
-   if (!noResultsDiv) return;
-   
    noResultsDiv.innerHTML = `
        <div class="loading-state">
            <div class="loading-icon">
@@ -918,8 +908,6 @@ function hideLoadingState() {
 
 function showError(message) {
    const noResultsDiv = document.getElementById('noResults');
-   if (!noResultsDiv) return;
-   
    noResultsDiv.innerHTML = `
        <div class="error-state">
            <div class="error-icon">
@@ -957,9 +945,6 @@ function setupEventListeners() {
         function updateSearchBoxState() {
             const hasContent = searchInput.value.length > 0;
             searchBox.classList.toggle('has-content', hasContent);
-            if (searchClear) {
-                searchClear.style.display = hasContent ? 'block' : 'none';
-            }
         }
         
         // Optimized input handler
@@ -989,23 +974,6 @@ function setupEventListeners() {
         updateSearchBoxState();
     }
     
-    if (searchClear) {
-        searchClear.addEventListener('click', function() {
-            if (searchInput) {
-                searchInput.value = '';
-                searchInput.focus();
-            }
-            this.style.display = 'none';
-            
-            if (selectedCountry || selectedRegion || selectedGlobal) {
-                currentFilters.searchQuery = '';
-                filterPackages();
-            } else {
-                renderCountrySelection();
-            }
-        });
-    }
-    
     // Rest of the event listeners dengan passive options
     const sortOrder = document.getElementById('sortOrder');
     if (sortOrder) {
@@ -1029,7 +997,6 @@ function setupEventListeners() {
 function resetSearchState() {
     const searchInput = document.getElementById('searchInput');
     const searchBox = searchInput?.closest('.search-box');
-    const searchClear = document.getElementById('searchClear');
     
     if (searchInput) {
         searchInput.value = '';
@@ -1037,18 +1004,54 @@ function resetSearchState() {
             searchBox.classList.remove('has-content', 'focused');
         }
     }
+}
+
+// Update existing functions to call this
+function goBackToCountrySelection() {
+    console.log('🔙 Going back to country selection, target tab:', lastActiveTab);
     
-    if (searchClear) {
-        searchClear.style.display = 'none';
+    selectedCountry = null;
+    selectedRegion = null;
+    selectedGlobal = null;
+    currentPackages = [];
+    navigationLevel = 'main';
+    
+    // Set currentTab to lastActiveTab so we return to the correct tab
+    currentTab = lastActiveTab;
+    
+    // Remove back button
+    const backButton = document.querySelector('.back-button');
+    if (backButton) {
+        backButton.remove();
     }
+    
+    // Reset search - IMPROVED
+    resetSearchState();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.placeholder = 'Search countries (e.g., Indonesia, Singapore, Malaysia)';
+    }
+    
+    // Hide packages and filters
+    const packagesDiv = document.getElementById('packagesList');
+    const filtersSection = document.querySelector('.filter-section');
+    packagesDiv.style.display = 'none';
+    filtersSection.style.display = 'none';
+    
+    // Show country selection with correct tab
+    showCountrySelection();
+    renderCountrySelection();
+    
+    // Scroll to top setelah render
+    setTimeout(() => {
+        scrollToTop();
+    }, 100);
 }
 
 function toggleFilters() {
    const filterContent = document.getElementById('filterContent');
    const toggleIcon = document.getElementById('filterToggleIcon');
    const toggleText = document.getElementById('filterToggleText');
-   
-   if (!filterContent || !toggleIcon || !toggleText) return;
    
    filtersVisible = !filtersVisible;
    
@@ -1082,9 +1085,9 @@ function setPackageType(type) {
 function setTikTokFilter(filter) {
    currentFilters.tiktokFilter = filter;
    
-   safeToggleClass('allTikTokBtn', 'active', filter === 'all');
-   safeToggleClass('tiktokSupportedBtn', 'active', filter === 'supported');
-   safeToggleClass('tiktokNotSupportedBtn', 'active', filter === 'not-supported');
+   document.getElementById('allTikTokBtn').classList.toggle('active', filter === 'all');
+   document.getElementById('tiktokSupportedBtn').classList.toggle('active', filter === 'supported');
+   document.getElementById('tiktokNotSupportedBtn').classList.toggle('active', filter === 'not-supported');
    
    filterPackages();
 }
@@ -1096,13 +1099,13 @@ function filterPackages() {
         return;
     }
     
-    console.log('🔍 Filtering packages for:', selectedCountry || selectedRegion || selectedGlobal);
+    console.log('🔍 Filtering packages');
     
     const query = currentFilters.searchQuery;
     const packagesDiv = document.getElementById('packagesList');
     const noResultsDiv = document.getElementById('noResults');
 
-    // Filter packages
+    // Filter packages (tetap sama)
     let filteredPackages = currentPackages.filter(pkg => {
         let matchesPackageType = true;
         if (currentFilters.packageType !== 'all') {
@@ -1130,74 +1133,66 @@ function filterPackages() {
 
     // Sort packages
     filteredPackages = sortPackages(filteredPackages, currentFilters.sortOrder, query);
-    
-    // DEBUG: Log urutan packages
-    console.log('📋 Package order after sorting:');
-    filteredPackages.slice(0, 10).forEach((pkg, index) => {
-        const isHkIp = !supportsTikTok(pkg);
-        const isUnlimited = isUnlimitedPackage(pkg);
-        console.log(`${index + 1}. ${pkg.name} | HK IP: ${isHkIp} | Unlimited: ${isUnlimited} | Volume: ${pkg.volume} | Price: $${pkg.price_usd}`);
-    });
 
-    // Render packages...
+    // OPTIMIZED RENDERING untuk mobile
     if (filteredPackages.length > 0) {
-        if (packagesDiv) packagesDiv.style.display = 'grid';
-        if (noResultsDiv) noResultsDiv.style.display = 'none';
+        packagesDiv.style.display = 'grid';
+        noResultsDiv.style.display = 'none';
         
+        // Batch rendering untuk performa mobile
         const isMobile = window.innerWidth <= 768;
         
         if (isMobile && filteredPackages.length > 20) {
+            // Pagination untuk mobile jika packages terlalu banyak
             const pageSize = 10;
             const firstBatch = filteredPackages.slice(0, pageSize);
             
-            if (packagesDiv) {
-                packagesDiv.innerHTML = firstBatch.map(pkg => renderPackage(pkg, query)).join('');
+            packagesDiv.innerHTML = firstBatch.map(pkg => renderPackage(pkg, query)).join('');
             
-                if (filteredPackages.length > pageSize) {
-                    const loadMoreBtn = document.createElement('div');
-                    loadMoreBtn.className = 'load-more-container';
-                    loadMoreBtn.innerHTML = `
-                        <button class="btn-load-more" onclick="loadMorePackages(${pageSize})">
-                            <i class="fas fa-plus"></i>
-                            Load More (${filteredPackages.length - pageSize} remaining)
-                        </button>
-                    `;
-                    packagesDiv.appendChild(loadMoreBtn);
-                    
-                    window.remainingPackages = filteredPackages.slice(pageSize);
-                    window.currentPageSize = pageSize;
-                }
+            // Load more button untuk sisanya
+            if (filteredPackages.length > pageSize) {
+                const loadMoreBtn = document.createElement('div');
+                loadMoreBtn.className = 'load-more-container';
+                loadMoreBtn.innerHTML = `
+                    <button class="btn-load-more" onclick="loadMorePackages(${pageSize})">
+                        <i class="fas fa-plus"></i>
+                        Load More (${filteredPackages.length - pageSize} remaining)
+                    </button>
+                `;
+                packagesDiv.appendChild(loadMoreBtn);
+                
+                // Store remaining packages
+                window.remainingPackages = filteredPackages.slice(pageSize);
+                window.currentPageSize = pageSize;
             }
         } else {
-            if (packagesDiv) {
-                packagesDiv.innerHTML = filteredPackages.map(pkg => renderPackage(pkg, query)).join('');
-                
-                if (!isMobile) {
-                    animatePackageItems();
-                }
+            // Normal rendering untuk desktop atau packages sedikit
+            packagesDiv.innerHTML = filteredPackages.map(pkg => renderPackage(pkg, query)).join('');
+            
+            // Animasi hanya untuk desktop
+            if (!isMobile) {
+                animatePackageItems();
             }
         }
         
     } else {
-        // No results...
-        if (packagesDiv) packagesDiv.style.display = 'none';
-        if (noResultsDiv) noResultsDiv.style.display = 'block';
+        // No results
+        packagesDiv.style.display = 'none';
+        noResultsDiv.style.display = 'block';
         
         let selectionName = selectedCountry || selectedRegion || selectedGlobal;
         
-        if (noResultsDiv) {
-            noResultsDiv.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="fas fa-search"></i></div>
-                    <h3 class="empty-title">No packages found</h3>
-                    <p class="empty-description">No packages match your criteria in ${selectionName}</p>
-                    <button class="btn-retry" onclick="resetAllFilters()">
-                        <i class="fas fa-redo"></i>
-                        Reset Filters
-                    </button>
-                </div>
-            `;
-        }
+        noResultsDiv.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-search"></i></div>
+                <h3 class="empty-title">No packages found</h3>
+                <p class="empty-description">No packages match your criteria in ${selectionName}</p>
+                <button class="btn-retry" onclick="resetAllFilters()">
+                    <i class="fas fa-redo"></i>
+                    Reset Filters
+                </button>
+            </div>
+        `;
     }
 }
 
@@ -1206,8 +1201,6 @@ function loadMorePackages(currentSize) {
     if (!window.remainingPackages || window.remainingPackages.length === 0) return;
     
     const packagesDiv = document.getElementById('packagesList');
-    if (!packagesDiv) return;
-    
     const loadMoreContainer = packagesDiv.querySelector('.load-more-container');
     
     // Remove load more button
@@ -1285,31 +1278,25 @@ function resetAllFilters() {
     
     const searchInput = safeGetElement('searchInput');
     const sortOrder = safeGetElement('sortOrder');
+    const searchClear = safeGetElement('searchClear');
     
     if (searchInput) searchInput.value = '';
     if (sortOrder) sortOrder.value = 'relevance';
-    
-    resetSearchState();
+    if (searchClear) searchClear.style.display = 'none';
     
     setPackageType('all');
     setTikTokFilter('all');
     
     filterPackages();
 }
-
 // ===========================================
 // HELPER FUNCTIONS
 // ===========================================
 
 function isUnlimitedPackage(pkg) {
-    const supportTopUpType = parseInt(pkg.support_topup_type);
-    const fupPolicy = (pkg.fup_policy || '').trim();
-    
-    // Debug setiap package
-    console.log(`📦 ${pkg.name} | support_topup_type: ${supportTopUpType} | fup_policy: "${fupPolicy}" | isUnlimited: ${supportTopUpType === 1 && fupPolicy !== ''}`);
-    
-    // Dayplans/Unlimited: support_topup_type = 1 DAN ada fup_policy
-    return supportTopUpType === 1 && fupPolicy !== '';
+   const supportTopUpType = parseInt(pkg.support_topup_type);
+   const fupPolicy = (pkg.fup_policy || '').trim();
+   return supportTopUpType === 1 && fupPolicy !== '';
 }
 
 function supportsTikTok(pkg) {
@@ -1342,53 +1329,88 @@ function sortPackages(packages, sortBy, query = '') {
             return sorted.sort((a, b) => a.name.localeCompare(b.name));
         case 'name-desc':
             return sorted.sort((a, b) => b.name.localeCompare(a.name));
-        default:
-            // PRIORITAS TEGAS: HK IP → Non-HK IP → Regular → Dayplans
+        case 'tiktok-asc':
+            // TikTok supported dulu (non-HK IP)
             return sorted.sort((a, b) => {
-                // UNTUK COUNTRIES: LOCAL packages dulu
+                const aTikTok = supportsTikTok(a) ? 1 : 0;
+                const bTikTok = supportsTikTok(b) ? 1 : 0;
+                if (aTikTok !== bTikTok) {
+                    return bTikTok - aTikTok; // TikTok supported dulu
+                }
+                // Lalu sort by volume kecil ke besar
+                return parseInt(a.volume) - parseInt(b.volume);
+            });
+        case 'tiktok-desc':
+            // HK IP dulu (TikTok not supported)
+            return sorted.sort((a, b) => {
+                const aTikTok = supportsTikTok(a) ? 1 : 0;
+                const bTikTok = supportsTikTok(b) ? 1 : 0;
+                if (aTikTok !== bTikTok) {
+                    return aTikTok - bTikTok; // HK IP dulu
+                }
+                // Lalu sort by volume kecil ke besar
+                return parseInt(a.volume) - parseInt(b.volume);
+            });
+        default:
+            // Default sorting
+            return sorted.sort((a, b) => {
+                // KHUSUS UNTUK COUNTRIES: LOCAL packages dulu
                 if (selectedCountry && !selectedRegion && !selectedGlobal) {
                     const typeOrder = {'LOCAL': 1, 'REGIONAL': 2, 'GLOBAL': 3};
-                    const aTypeOrder = typeOrder[a.type] || 4;
-                    const bTypeOrder = typeOrder[b.type] || 4;
+                    const aOrder = typeOrder[a.type] || 4;
+                    const bOrder = typeOrder[b.type] || 4;
                     
-                    if (aTypeOrder !== bTypeOrder) {
-                        return aTypeOrder - bTypeOrder;
+                    if (aOrder !== bOrder) {
+                        return aOrder - bOrder; // LOCAL dulu untuk countries
                     }
+                    
+                    // Dalam setiap type group, sort by HK IP dulu
+                    const aTikTok = supportsTikTok(a) ? 1 : 0;
+                    const bTikTok = supportsTikTok(b) ? 1 : 0;
+                    if (aTikTok !== bTikTok) {
+                        return aTikTok - bTikTok; // HK IP (not supported) dulu
+                    }
+                    
+                    // Lalu sort by volume (kecil ke besar)
+                    const aVolume = parseInt(a.volume) || 0;
+                    const bVolume = parseInt(b.volume) || 0;
+                    if (aVolume !== bVolume) {
+                        return aVolume - bVolume; // Volume kecil dulu
+                    }
+                    
+                    // Lalu sort by price (murah ke mahal)
+                    const aPrice = parseFloat(a.price_usd) || 0;
+                    const bPrice = parseFloat(b.price_usd) || 0;
+                    if (aPrice !== bPrice) {
+                        return aPrice - bPrice; // Harga murah dulu
+                    }
+                    
+                    // Sort by name sebagai tie-breaker
+                    return a.name.localeCompare(b.name);
                 }
                 
-                // STEP 1: IP Location Priority
-                const aIsHkIp = !supportsTikTok(a); // true = HK IP, false = Non-HK
-                const bIsHkIp = !supportsTikTok(b);
-                
-                if (aIsHkIp !== bIsHkIp) {
-                    // HK IP dulu: true (1) < false (0), jadi kita balik
-                    return aIsHkIp ? -1 : 1; // HK IP (true) dapat nilai -1 (lebih kecil)
+                // UNTUK REGIONS/GLOBAL: Langsung sort by HK IP dulu
+                const aTikTok = supportsTikTok(a) ? 1 : 0;
+                const bTikTok = supportsTikTok(b) ? 1 : 0;
+                if (aTikTok !== bTikTok) {
+                    return aTikTok - bTikTok; // HK IP (not supported) dulu
                 }
                 
-                // STEP 2: Package Type Priority - REGULAR DULU!
-                const aIsUnlimited = isUnlimitedPackage(a); // true = Dayplans, false = Regular
-                const bIsUnlimited = isUnlimitedPackage(b);
-                
-                if (aIsUnlimited !== bIsUnlimited) {
-                    // Regular dulu: false (0) < true (1), jadi langsung compare
-                    return aIsUnlimited ? 1 : -1; // Regular (false) dapat nilai -1 (lebih kecil)
-                }
-                
-                // STEP 3: Volume Priority (kecil ke besar)
+                // Lalu sort by volume (kecil ke besar)
                 const aVolume = parseInt(a.volume) || 0;
                 const bVolume = parseInt(b.volume) || 0;
                 if (aVolume !== bVolume) {
-                    return aVolume - bVolume;
+                    return aVolume - bVolume; // Volume kecil dulu
                 }
                 
-                // STEP 4: Price Priority (murah ke mahal)
+                // Lalu sort by price (murah ke mahal)
                 const aPrice = parseFloat(a.price_usd) || 0;
                 const bPrice = parseFloat(b.price_usd) || 0;
                 if (aPrice !== bPrice) {
-                    return aPrice - bPrice;
+                    return aPrice - bPrice; // Harga murah dulu
                 }
                 
-                // STEP 5: Name (A-Z)
+                // Sort by name sebagai tie-breaker
                 return a.name.localeCompare(b.name);
             });
     }
@@ -1571,8 +1593,6 @@ function showCountryModal(packageCode) {
    const countryList = document.getElementById('countryList');
    const searchInput = document.getElementById('countrySearchInput');
    
-   if (!modal || !countryList || !searchInput) return;
-   
    const locationName = pkg.location_name || '';
    let countries = [];
    
@@ -1629,128 +1649,93 @@ function showCountryModal(packageCode) {
    }, 100);
 }
 
-// Update di index.js - function showOrderModal
 function showOrderModal(packageCode, isUnlimited = false) {
-    const pkg = currentPackages.find(p => p.package_code === packageCode);
-    if (!pkg) {
-        console.error('Package not found:', packageCode);
-        return;
-    }
+   const pkg = currentPackages.find(p => p.package_code === packageCode);
+   if (!pkg) {
+       console.error('Package not found:', packageCode);
+       return;
+   }
 
-    const orderAction = isUnlimited ? 'order_unlimited' : 'order_esim';
-    const orderActionInput = document.getElementById('orderAction');
-    const orderPackageCodeInput = document.getElementById('orderPackageCode');
-    
-    if (orderActionInput) orderActionInput.value = orderAction;
-    if (orderPackageCodeInput) orderPackageCodeInput.value = packageCode;
-    
-    const modalTitle = isUnlimited ? 'Order Unlimited Package' : 'Order Regular Package';
-    const orderModalTitle = document.getElementById('orderModalTitle');
-    if (orderModalTitle) {
-        orderModalTitle.innerHTML = `
-            <i class="${isUnlimited ? 'fas fa-infinity' : 'fas fa-shopping-cart'}"></i>
-            ${modalTitle}
-        `;
-    }
-    
-    const submitBtn = document.getElementById('orderSubmitBtn');
-    if (submitBtn) {
-        submitBtn.innerHTML = `
-            <i class="${isUnlimited ? 'fas fa-infinity' : 'fas fa-shopping-cart'}"></i>
-            <span class="btn-text">${isUnlimited ? 'Buy Unlimited' : 'Buy Now'}</span>
-        `;
-    }
-    
-    const countGroup = document.getElementById('countGroup');
-    const periodGroup = document.getElementById('periodGroup');
-    const countHint = document.getElementById('countHint');
-    
-    if (isUnlimited) {
-        if (countGroup) countGroup.style.display = 'none';
-        if (periodGroup) periodGroup.style.display = 'block';
-        if (countHint) countHint.style.display = 'none';
-    } else {
-        if (countGroup) countGroup.style.display = 'block';
-        if (periodGroup) periodGroup.style.display = 'none';
-        if (countHint) countHint.style.display = 'block';
-    }
-    
-    // Rest of existing code for package details...
-    const supportTopUpType = parseInt(pkg.support_topup_type);
-    const fupPolicy = (pkg.fup_policy || '').trim();
-    
-    let packageDetails = `
-        <h4>Package Details</h4>
-        <p><strong>Package Name:</strong> ${pkg.name}</p>
-        <p><strong>Data:</strong> ${formatBytes(parseInt(pkg.volume))}</p>
-        <p><strong>Duration:</strong> ${pkg.duration} ${pkg.duration_unit.toLowerCase()}</p>
-        <p><strong>Price:</strong> Rp ${parseInt(pkg.price_idr).toLocaleString('id-ID')}</p>
-        <p><strong>TikTok Support:</strong> ${supportsTikTok(pkg) ? 'Yes' : 'No (HK IP)'}</p>
-    `;
-    
-    if (fupPolicy) {
-        packageDetails += `<p><strong>FUP Policy:</strong> ${fupPolicy}</p>`;
-    }
-    
-    if (isUnlimited) {
-        packageDetails += `<p><strong>Type:</strong> Unlimited/Dayplans Package</p>`;
-        packageDetails += `<p><strong>Price per Day:</strong> Rp ${Math.round(parseInt(pkg.price_idr)).toLocaleString('id-ID')}</p>`;
-    }
-    
-    const orderPackageDetails = document.getElementById('orderPackageDetails');
-    if (orderPackageDetails) {
-        orderPackageDetails.innerHTML = packageDetails;
-    }
+   const orderAction = isUnlimited ? 'order_unlimited' : 'order_esim';
+   document.getElementById('orderAction').value = orderAction;
+   document.getElementById('orderPackageCode').value = packageCode;
+   
+   const modalTitle = isUnlimited ? 'Order Unlimited Package' : 'Order Regular Package';
+   document.getElementById('orderModalTitle').innerHTML = `
+       <i class="${isUnlimited ? 'fas fa-infinity' : 'fas fa-shopping-cart'}"></i>
+       ${modalTitle}
+   `;
+   
+   const submitBtn = document.getElementById('orderSubmitBtn');
+   submitBtn.innerHTML = `
+       <i class="${isUnlimited ? 'fas fa-infinity' : 'fas fa-shopping-cart'}"></i>
+       <span class="btn-text">${isUnlimited ? 'Buy Unlimited' : 'Buy Now'}</span>
+   `;
+   
+   document.getElementById('countGroup').style.display = isUnlimited ? 'none' : 'block';
+   document.getElementById('periodGroup').style.display = isUnlimited ? 'block' : 'none';
+   
+   const supportTopUpType = parseInt(pkg.support_topup_type);
+   const fupPolicy = (pkg.fup_policy || '').trim();
+   
+   let packageDetails = `
+       <h4>Package Details</h4>
+       <p><strong>Package Name:</strong> ${pkg.name}</p>
+       <p><strong>Data:</strong> ${formatBytes(parseInt(pkg.volume))}</p>
+       <p><strong>Duration:</strong> ${pkg.duration} ${pkg.duration_unit.toLowerCase()}</p>
+       <p><strong>Price:</strong> Rp ${parseInt(pkg.price_idr).toLocaleString('id-ID')}</p>
+       <p><strong>TikTok Support:</strong> ${supportsTikTok(pkg) ? 'Yes' : 'No (HK IP)'}</p>
+   `;
+   
+   if (fupPolicy) {
+       packageDetails += `<p><strong>FUP Policy:</strong> ${fupPolicy}</p>`;
+   }
+   
+   if (isUnlimited) {
+       packageDetails += `<p><strong>Type:</strong> Unlimited/Dayplans Package</p>`;
+       packageDetails += `<p><strong>Price per Day:</strong> Rp ${Math.round(parseInt(pkg.price_idr)).toLocaleString('id-ID')}</p>`;
+   }
+   
+   document.getElementById('orderPackageDetails').innerHTML = packageDetails;
 
-    const modal = document.getElementById('orderModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        
-        setTimeout(() => {
-            const customerName = document.getElementById('customerName');
-            if (customerName) customerName.focus();
-        }, 100);
-    }
+   const modal = document.getElementById('orderModal');
+   modal.style.display = 'flex';
+   
+   setTimeout(() => {
+       document.getElementById('customerName').focus();
+   }, 100);
 }
 
 function showSuccessModal(results, isUnlimited = false) {
    const packageType = isUnlimited ? 'Unlimited Package' : 'Regular Package';
    const isMultiple = Array.isArray(results) && results.length > 1;
    
-   const successMessage = document.getElementById('successMessage');
-   const singleLinkContainer = document.getElementById('singleLinkContainer');
-   const multipleLinkContainer = document.getElementById('multipleLinkContainer');
-   
-   if (!successMessage || !singleLinkContainer || !multipleLinkContainer) return;
-   
    if (isMultiple) {
        // Multiple orders
-       successMessage.innerHTML = `
+       document.getElementById('successMessage').innerHTML = `
            <p>🎉 ${results.length} ${packageType}s have been ordered successfully!</p>
        `;
        
        // Show multiple links container
-       singleLinkContainer.style.display = 'none';
-       multipleLinkContainer.style.display = 'block';
+       document.getElementById('singleLinkContainer').style.display = 'none';
+       document.getElementById('multipleLinkContainer').style.display = 'block';
        
        // Populate links list
        const linksList = document.getElementById('linksList');
-       if (linksList) {
-           linksList.innerHTML = results.map(result => {
-               const tokenLink = `${window.location.origin}/detail.php?token=${result.token}`;
-               return `
-                   <div class="link-item">
-                       <div class="link-item-info">
-                           <div class="link-item-name">${result.customerName}</div>
-                           <div class="link-item-url">${tokenLink}</div>
-                       </div>
-                       <button class="link-item-copy" onclick="copyIndividualLink('${tokenLink}')">
-                           <i class="fas fa-copy"></i> Copy
-                       </button>
+       linksList.innerHTML = results.map(result => {
+           const tokenLink = `${window.location.origin}/detail.php?token=${result.token}`;
+           return `
+               <div class="link-item">
+                   <div class="link-item-info">
+                       <div class="link-item-name">${result.customerName}</div>
+                       <div class="link-item-url">${tokenLink}</div>
                    </div>
-               `;
-           }).join('');
-       }
+                   <button class="link-item-copy" onclick="copyIndividualLink('${tokenLink}')">
+                       <i class="fas fa-copy"></i> Copy
+                   </button>
+               </div>
+           `;
+       }).join('');
        
        // Store all links for copy all functionality
        window.allOrderLinks = results.map(result => 
@@ -1762,14 +1747,13 @@ function showSuccessModal(results, isUnlimited = false) {
        const result = Array.isArray(results) ? results[0] : results;
        const tokenLink = `${window.location.origin}/detail.php?token=${result.token || result}`;
        
-       successMessage.innerHTML = `
+       document.getElementById('successMessage').innerHTML = `
            <p>🎉 ${packageType} has been ordered successfully!</p>
        `;
        
-       const tokenLinkInput = document.getElementById('tokenLink');
-       if (tokenLinkInput) tokenLinkInput.value = tokenLink;
-       singleLinkContainer.style.display = 'flex';
-       multipleLinkContainer.style.display = 'none';
+       document.getElementById('tokenLink').value = tokenLink;
+       document.getElementById('singleLinkContainer').style.display = 'flex';
+       document.getElementById('multipleLinkContainer').style.display = 'none';
    }
    
    // Show provisioning note if any order is still provisioning
@@ -1777,14 +1761,11 @@ function showSuccessModal(results, isUnlimited = false) {
        results.some(r => r.provisioning) : 
        (results.provisioning || false);
    
-   const provisioningNote = document.getElementById('provisioningNote');
-   if (provisioningNote) {
-       provisioningNote.style.display = hasProvisioning ? 'block' : 'none';
-   }
+   document.getElementById('provisioningNote').style.display = hasProvisioning ? 'block' : 'none';
    
    closeModal('orderModal');
    const modal = document.getElementById('successModal');
-   if (modal) modal.style.display = 'flex';
+   modal.style.display = 'flex';
 }
 
 function closeModal(modalId) {
@@ -1807,10 +1788,8 @@ function closeAllModals() {
 
 function copyTokenLink() {
    const tokenInput = document.getElementById('tokenLink');
-   if (!tokenInput) return;
-   
    const copyBtn = tokenInput.nextElementSibling;
-   const container = copyBtn?.closest('.link-container');
+   const container = copyBtn.closest('.link-container');
    
    tokenInput.select();
    
@@ -1828,7 +1807,7 @@ function copyTokenLink() {
 
 function copyIndividualLink(link) {
    const clickedBtn = event.target.closest('.link-item-copy');
-   const linkItem = clickedBtn?.closest('.link-item');
+   const linkItem = clickedBtn.closest('.link-item');
    
    try {
        navigator.clipboard.writeText(link).then(() => {
@@ -1853,7 +1832,7 @@ function copyAllLinks() {
    
    const allLinksText = window.allOrderLinks.join('\n');
    const copyAllBtn = document.querySelector('.copy-all-btn');
-   const linksHeader = copyAllBtn?.closest('.links-header');
+   const linksHeader = copyAllBtn.closest('.links-header');
    
    try {
        navigator.clipboard.writeText(allLinksText).then(() => {
@@ -1874,8 +1853,6 @@ function copyAllLinks() {
 }
 
 function showCopySuccess(container, message) {
-   if (!container) return;
-   
    const existingSuccess = container.querySelector('.copy-success');
    if (existingSuccess) {
        existingSuccess.remove();
@@ -1896,8 +1873,6 @@ function showCopySuccess(container, message) {
 }
 
 function animateCopyButton(button) {
-   if (!button) return;
-   
    const originalHTML = button.innerHTML;
    
    button.classList.add('copied');
@@ -1908,102 +1883,3 @@ function animateCopyButton(button) {
        button.innerHTML = originalHTML;
    }, 1500);
 }
-
-// ===========================================
-// ADDITIONAL FUNCTIONS
-// ===========================================
-
-// Close modals when clicking outside
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal-overlay')) {
-        const modal = e.target.closest('.modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    }
-});
-
-// Keyboard navigation
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        // Close any open modals
-        closeAllModals();
-    }
-});
-
-// Performance optimization: Reduce motion for users who prefer it
-if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.documentElement.style.setProperty('--transition-fast', '0.01ms');
-    document.documentElement.style.setProperty('--transition-normal', '0.01ms');
-}
-
-// Error handling
-window.addEventListener('error', function(e) {
-    console.log('Index page script error:', e.error);
-});
-
-// Add loading state management
-document.addEventListener('DOMContentLoaded', function() {
-    // Remove any loading states
-    document.body.classList.add('loaded');
-    
-    // Add loaded class for CSS animations
-    const style = document.createElement('style');
-    style.textContent = `
-        body:not(.loaded) * {
-            animation-play-state: paused !important;
-        }
-        
-        .loaded {
-            animation-play-state: running !important;
-        }
-    `;
-    document.head.appendChild(style);
-    // Setup form submission handler
-    const orderForm = document.getElementById('orderForm');
-    if (orderForm) {
-        orderForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('orderSubmitBtn');
-            const originalText = submitBtn.innerHTML;
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            
-            try {
-                const formData = new FormData(this);
-                const response = await fetch('', { // Submit ke current page (index.php)
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                console.log('Order result:', result);
-                
-                if (result.success) {
-                    closeModal('orderModal');
-                    
-                    if (result.is_multiple) {
-                        // Multiple orders
-                        showSuccessModal(result.orders, formData.get('action') === 'order_unlimited');
-                    } else {
-                        // Single order
-                        showSuccessModal(result.orders[0], formData.get('action') === 'order_unlimited');
-                    }
-                } else {
-                    alert('Order failed: ' + result.message);
-                }
-                
-            } catch (error) {
-                console.error('Order error:', error);
-                alert('Order failed: Network error');
-            } finally {
-                // Reset button
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        });
-    }
-});

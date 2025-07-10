@@ -338,43 +338,6 @@ function convertToCSV(data) {
     return [csvHeaders, ...csvRows].join('\n');
 }
 
-// Global functions for modals
-function showManualSuccessModal(orderId) {
-    document.getElementById('manualOrderId').value = orderId;
-    document.getElementById('manualSuccessModal').classList.add('show');
-    document.getElementById('manualSuccessModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // Focus pada textarea
-    setTimeout(() => {
-        document.getElementById('manualNotes').focus();
-    }, 100);
-}
-
-function closeManualSuccessModal() {
-    document.getElementById('manualSuccessModal').classList.remove('show');
-    setTimeout(() => {
-        document.getElementById('manualSuccessModal').style.display = 'none';
-        document.body.style.overflow = '';
-        document.getElementById('manualSuccessForm').reset();
-    }, 300);
-}
-
-// Global functions for HTML
-window.showManualSuccessModal = showManualSuccessModal;
-window.closeManualSuccessModal = closeManualSuccessModal;
-
-// Auto-hide success messages
-setTimeout(() => {
-    const message = document.querySelector('.message.success');
-    if (message) {
-        message.style.opacity = '0';
-        setTimeout(() => {
-            message.style.display = 'none';
-        }, 300);
-    }
-}, 5000);
-
 /**
  * Show order details modal
  */

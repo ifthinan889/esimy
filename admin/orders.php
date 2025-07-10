@@ -3,11 +3,6 @@
 define('ALLOWED_ACCESS', true);
 require_once __DIR__ . '/../config.php';
 
-// Initialize session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Include required files
 try {
     include '../includes/koneksi.php';

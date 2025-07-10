@@ -10,10 +10,6 @@ try {
     die("System error. Please try again later.");
 }
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Redirect if already logged in
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     header("Location: dashboard.php");
@@ -43,6 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $loginResult = attemptLogin($username, $password);
                 
                 if ($loginResult['success']) {
+                    // Set semua data session seperti biasa
                     $_SESSION['admin_logged_in'] = true;
                     $_SESSION['admin_id'] = $loginResult['user_id'];
                     $_SESSION['admin_username'] = $loginResult['username'];
@@ -50,6 +47,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     session_regenerate_id(true);
                     logSecurityEvent("Admin login successful: " . $username, 'info');
                     
+                    // ✅ FIX: Paksa tulis data session ke disk sebelum redirect
+                    session_write_close();
+                    
+                    // Baru lakukan redirect
                     header("Location: dashboard.php");
                     exit();
                 } else {
@@ -62,65 +63,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 function attemptLogin($username, $password) {
-    global $pdo, $conn;
-    
+    global $pdo; // Asumsikan Anda standarisasi menggunakan PDO
+
     try {
-        $admin = null;
-        
-        if (isset($pdo)) {
-            $stmt = $pdo->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
-            $stmt->execute([$username]);
-            $admin = $stmt->fetch(PDO::FETCH_ASSOC);
-        } elseif (isset($conn)) {
-            $stmt = $conn->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $admin = $result ? $result->fetch_assoc() : null;
-            $stmt->close();
-        }
-        
-        if ($admin && password_verify($password, $admin['password_hash'])) {
-            return [
-                'success' => true,
-                'user_id' => $admin['id'],
-                'username' => $admin['username']
-            ];
-        }
-        
-        // Default admin creation for first time setup
-        if ($username === "admin" && $password === "admin123") {
-            $count = 0;
-            if (isset($pdo)) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM admins");
-                $stmt->execute();
-                $count = $stmt->fetch()['count'];
-            } elseif (isset($conn)) {
-                $result = $conn->query("SELECT COUNT(*) as count FROM admins");
-                $count = $result->fetch_assoc()['count'];
+        // 1. Cari admin berdasarkan username
+        $stmt = $pdo->prepare("SELECT id, username, password_hash FROM admins WHERE username = ? LIMIT 1");
+        $stmt->execute([$username]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // 2. Jika admin ditemukan di database
+        if ($admin) {
+            // Verifikasi password-nya
+            if (password_verify($password, $admin['password_hash'])) {
+                // Jika password benar, login berhasil
+                return ['success' => true, 'user_id' => $admin['id'], 'username' => $admin['username']];
+            } else {
+                // Jika password salah, langsung gagalkan
+                return ['success' => false, 'message' => 'Username atau password salah!'];
             }
-            
-            if ($count == 0) {
-                $hash = password_hash($password, PASSWORD_DEFAULT);
-                if (isset($pdo)) {
-                    $stmt = $pdo->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
-                    if ($stmt->execute([$username, $hash])) {
-                        return ['success' => true, 'user_id' => $pdo->lastInsertId(), 'username' => $username];
-                    }
-                } elseif (isset($conn)) {
-                    $stmt = $conn->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
-                    $stmt->bind_param("ss", $username, $hash);
-                    if ($stmt->execute()) {
-                        $id = $conn->insert_id;
-                        $stmt->close();
-                        return ['success' => true, 'user_id' => $id, 'username' => $username];
-                    }
-                }
+        }
+
+        // 3. Jika admin TIDAK ditemukan, cek apakah ini setup pertama kali
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM admins");
+        $adminCount = $stmt->fetchColumn();
+
+        if ($adminCount == 0 && $username === "admin" && $password === "admin123") {
+            // Buat admin baru
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO admins (username, password_hash, created_at) VALUES (?, ?, NOW())");
+            if ($stmt->execute([$username, $hash])) {
+                // Login berhasil setelah admin dibuat
+                return ['success' => true, 'user_id' => $pdo->lastInsertId(), 'username' => $username];
             }
         }
         
+        // 4. Jika semua kondisi di atas tidak terpenuhi, berarti login gagal
         return ['success' => false, 'message' => 'Username atau password salah!'];
-        
+
     } catch (Exception $e) {
         error_log("Login error: " . $e->getMessage());
         return ['success' => false, 'message' => 'Terjadi kesalahan sistem.'];

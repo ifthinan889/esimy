@@ -305,24 +305,36 @@ function checkRateLimit($identifier, $maxRequests = 20, $timeWindow = 60) {
 // ===========================================
 
 if (!$isCLI) {
-    // Secure session settings
-    // ini_set('session.use_cookies', 1);
-    // ini_set('session.use_only_cookies', 1);
-    // ini_set('session.cookie_httponly', 1);
-    // ini_set('session.use_strict_mode', 1);
-    // ini_set('session.cookie_lifetime', 0);
-    // ini_set('session.gc_maxlifetime', 1800);
+    // Atur masa berlaku session menjadi 24 jam (86400 detik)
+    $lifetime = 86400; 
 
-    // if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    //     ini_set('session.cookie_secure', 1);
-    // }
+    // Simpan file session di direktori lokal agar tidak terhapus oleh server lain
+    $session_save_path = __DIR__ . '/sessions';
+    if (!is_dir($session_save_path)) {
+        // Pastikan folder ini ada dan server punya izin tulis (permission 755 atau 775)
+        mkdir($session_save_path, 0755, true);
+    }
+    ini_set('session.save_path', $session_save_path);
+
+    // Atur masa berlaku data session di SERVER
+    ini_set('session.gc_maxlifetime', $lifetime);
+
+    // Atur properti cookie session di BROWSER
+    session_set_cookie_params([
+        'lifetime' => $lifetime,
+        'path' => '/',
+        'domain' => '', 
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Strict'
+    ]);
+
+    // Mulai session SETELAH semua konfigurasi diatur
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     
-    // // Start session - DIPINDAH KE ATAS
-    // if (session_status() === PHP_SESSION_NONE) {
-    //     session_start();
-    // }
-    
-    // Run security middleware and set headers
+    // Jalankan middleware setelah session dan konfigurasi siap
     securityMiddleware();
     setSecurityHeaders();
 }

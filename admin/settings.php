@@ -3,17 +3,6 @@ error_reporting(0);
 ini_set('display_errors', '0');
 define('ALLOWED_ACCESS', true);
 
-// Session setup
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-if (session_status() === PHP_SESSION_NONE) session_start();
-
 require_once __DIR__ . '/../config.php';
 
 securityMiddleware();
@@ -164,7 +153,7 @@ $csrf_token = generateCSRFToken();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/settings.css?v=<?= filemtime('assets/js/settings.css') ?>">
+    <link rel="stylesheet" href="assets/css/settings.css?v=<?= filemtime('assets/css/settings.css') ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Admin settings for eSIM Portal">
 </head>

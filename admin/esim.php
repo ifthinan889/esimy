@@ -4,18 +4,6 @@ ini_set('display_errors', '0');
 
 // Secure admin dashboard
 define('ALLOWED_ACCESS', true);
-
-// Session setup SELALU sebelum output atau include lain!
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '',
-    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-if (session_status() === PHP_SESSION_NONE) session_start();
-
 // BARU include config, supaya function2 tersedia
 require_once __DIR__ . '/../config.php';
 
