@@ -1,1 +1,0 @@
-request_count|i:1;request_time|i:1752142798;csrf_token|s:64:"d4ab80742cb576d8d63783473a6d7d7d93986c817ffe8a141d86931cb8fdf7bd";csrf_token_time|i:1752142793;rate_limit_68e2ec1958c85c0bd586c0e0ac5ed6c5|a:2:{s:5:"count";i:1;s:5:"start";i:1752138518;}admin_logged_in|b:1;admin_id|s:1:"3";admin_username|s:5:"admin";last_session_regenerate|i:1752142793;
