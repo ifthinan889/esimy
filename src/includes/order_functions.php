@@ -8,32 +8,28 @@ function createMultipleEsimOrders($formData) {
     global $pdo;
     
     try {
-        error_log("=== CREATE MULTIPLE ORDERS DEBUG ===");
-        error_log("Form data: " . json_encode($formData));
-        
+        // Validate required fields
         if (empty($formData['customer_name']) || empty($formData['package_code'])) {
             return ['success' => false, 'message' => 'Customer name and package code are required'];
         }
         
-        // Gunakan getPackageDetails() yang sudah ada di api.php
+        // Get package details
         $package = getPackageDetails($formData['package_code']);
         if (!$package) {
             return ['success' => false, 'message' => 'Package not found: ' . $formData['package_code']];
         }
         
-        error_log("Package found: " . $package['nama']);
-        
-        // Determine unlimited
+        // Determine if unlimited package
         $isUnlimited = isUnlimitedPackage($package);
         $count = $isUnlimited ? 1 : max(1, min(20, (int)($formData['count'] ?? 1)));
         $periodNum = $isUnlimited ? max(1, min(30, (int)($formData['period_num'] ?? 1))) : null;
         
-        // Calculate pricing - gunakan functions yang udah ada
+        // Calculate pricing
         $exchangeRate = getCurrentExchangeRate();
         $basePrice = (float)$package['price_usd'];
         $volumeGB = (float)$package['volume'] / (1024 * 1024 * 1024);
         
-        // Gunakan markup config sederhana
+        // Get markup configuration
         $markupConfig = [
             ['limit' => 1, 'markup' => 5000],
             ['limit' => 5, 'markup' => 10000], 
@@ -47,9 +43,7 @@ function createMultipleEsimOrders($formData) {
         }
         
         $totalPriceIdr = $singlePriceIdr * $count;
-        
-        error_log("Pricing calculated: single={$singlePriceIdr}, total={$totalPriceIdr}, count={$count}");
-        
+
         // Start transaction
         $pdo->beginTransaction();
         
@@ -60,9 +54,7 @@ function createMultipleEsimOrders($formData) {
             for ($i = 1; $i <= $count; $i++) {
                 $customerName = $count > 1 ? $formData['customer_name'] . '_' . $i : $formData['customer_name'];
                 
-                error_log("Creating order {$i}/{$count} for: {$customerName}");
-                
-                // Generate token - gunakan dari config.php
+                // Generate unique token
                 $token = generateSecureToken(24);
                 $attempts = 0;
                 while (tokenExists($token) && $attempts < 10) {
@@ -74,16 +66,14 @@ function createMultipleEsimOrders($formData) {
                     throw new Exception("Cannot generate unique token after 10 attempts");
                 }
                 
-                error_log("Generated token: {$token}");
-                
-                // Insert order - gunakan dbInsert yang udah ada
+                // Prepare order data
                 $orderData = [
                     'nama' => $customerName,
                     'phone' => $formData['phone'] ?? '',
                     'orderNo' => '',
                     'iccid' => '',
                     'packageCode' => $formData['package_code'],
-                    'packageName' => $package['nama'],
+                    'packageName' => $package['name'],
                     'price' => $singlePriceIdr,
                     'token' => $token,
                     'created_at' => date('Y-m-d H:i:s'),
@@ -99,22 +89,15 @@ function createMultipleEsimOrders($formData) {
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
                 
-                error_log("About to insert order data: " . json_encode($orderData));
-                
-                // Check if dbInsert function exists
+                // Insert order into database
                 if (!function_exists('dbInsert')) {
                     throw new Exception("dbInsert function not found - check koneksi.php");
                 }
                 
                 $orderId = dbInsert('esim_orders', $orderData);
                 
-                error_log("dbInsert result: " . var_export($orderId, true));
-                
                 if (!$orderId || $orderId === false) {
-                    // Try to get PDO error info
                     $errorInfo = $pdo->errorInfo();
-                    error_log("PDO Error Info: " . json_encode($errorInfo));
-                    
                     throw new Exception("Failed to insert order into database. PDO Error: " . ($errorInfo[2] ?? 'Unknown'));
                 }
                 
@@ -125,14 +108,9 @@ function createMultipleEsimOrders($formData) {
                     'order_id' => $orderId
                 ];
                 
-                error_log("Order {$i} created successfully with ID: {$orderId}");
             }
             
-            // Create payment - dummy for now
-            $paymentOrderId = 'ESIM_' . date('YmdHis') . '_' . rand(10000, 99999);
-            
             $pdo->commit();
-            error_log("Transaction committed successfully");
             
             return [
                 'success' => true,
@@ -144,13 +122,11 @@ function createMultipleEsimOrders($formData) {
             
         } catch (Exception $e) {
             $pdo->rollback();
-            error_log("Transaction rollback due to: " . $e->getMessage());
             throw $e;
         }
         
     } catch (Exception $e) {
         error_log("Create multiple orders error: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
         return ['success' => false, 'message' => 'Order creation failed: ' . $e->getMessage()];
     }
 }

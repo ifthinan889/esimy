@@ -11,10 +11,10 @@ if (session_status() === PHP_SESSION_NONE) {
 // Include required files
 try {
     require_once __DIR__ . '/../src/includes/koneksi.php';
-    require_once __DIR__ . '/../src/includes/functions.php';        // Basic functions (existing)
-    require_once __DIR__ . '/../src/includes/order_functions.php';  // NEW - Order related
-    require_once __DIR__ . '/../src/includes/payment_functions.php'; // NEW - Payment related
-    require_once __DIR__ . '/../src/includes/api.php';              // API functions (existing)
+    require_once __DIR__ . '/../src/includes/functions.php';
+    require_once __DIR__ . '/../src/includes/order_functions.php';
+    require_once __DIR__ . '/../src/includes/payment_functions.php';
+    require_once __DIR__ . '/../src/includes/api.php';
 } catch (Exception $e) {
     error_log("Failed to include required files: " . $e->getMessage());
     die("System error. Please try again later.");
@@ -31,10 +31,8 @@ try {
 // Generate CSRF token
 $csrf_token = generateCSRFToken();
 
-// Handle AJAX requests first - BEFORE any HTML output
+// Handle AJAX requests first
 if (isset($_GET['action'])) {
-    // Prevent any HTML output before JSON
-    ob_clean();
     header('Content-Type: application/json');
     
     try {
@@ -58,10 +56,9 @@ if (isset($_GET['action'])) {
     exit;
 }
 
-// ✅ TAMBAHKAN DI SINI - Handle POST form submissions
+// Handle POST form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    // Verify CSRF token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
         exit;
@@ -72,7 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     switch ($_POST['action']) {
         case 'order_esim':
         case 'order_unlimited':
-            $result = createMultipleEsimOrders($_POST);
+            try {
+                $result = createMultipleEsimOrders($_POST);
+            } catch (Exception $e) {
+                error_log("Order creation error: " . $e->getMessage());
+                $result = ['success' => false, 'message' => 'Order creation failed'];
+            }
             echo json_encode($result);
             exit;
             
@@ -82,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// AJAX Handler Functions
 function handleGetCountries($pdo, $kurs) {
     $countries = [];
     $regions = [];
@@ -142,12 +145,6 @@ function handleGetCountries($pdo, $kurs) {
             $regionPrefix = extractRegionPrefix($packageName);
             $regionKey = strtolower(trim($regionPrefix));
             
-            // ✅ DEBUG: Log extraction
-            if (stripos($packageName, 'australia') !== false) {
-                error_log("EXTRACTED PREFIX: '" . $regionPrefix . "' from '" . $packageName . "'");
-                error_log("REGION KEY: '" . $regionKey . "'");
-            }
-            
             if (!isset($regions[$regionKey])) {
                 $regions[$regionKey] = [
                     'name' => $regionPrefix,
@@ -174,15 +171,6 @@ function handleGetCountries($pdo, $kurs) {
             }
             
             $globals[$globalKey]['package_count'] += (int)$row['package_count'];
-        }
-    }
-    
-    // ✅ DEBUG: Log final regions before output
-    error_log("=== FINAL REGIONS DEBUG ===");
-    foreach ($regions as $key => $region) {
-        error_log("Region: '" . $region['name'] . "' | Count: " . $region['package_count']);
-        if (stripos($region['name'], 'australia') !== false) {
-            error_log("*** AUSTRALIA FOUND IN FINAL: " . $region['name']);
         }
     }
     
@@ -226,7 +214,7 @@ function handleGetPackagesByRegion($pdo, $kurs) {
     
     $limitClause = $isMobile ? 'LIMIT 50' : '';
     
-    // Australia handling
+    // Special handling for Australia & New Zealand
     $australiaPatterns = [
         'australia & new zealand',
         'australia and new zealand',
@@ -243,7 +231,7 @@ function handleGetPackagesByRegion($pdo, $kurs) {
         }
     }
     
-    // PENGURUTAN SANGAT SEDERHANA DAN TEGAS
+    // Query with proper ordering
     if ($isAustraliaNewZealand) {
         $stmt = $pdo->prepare("
             SELECT * FROM packages 
@@ -286,15 +274,10 @@ function handleGetPackagesByRegion($pdo, $kurs) {
                 OR LOWER(name) LIKE '%caribbean%'
             )
             ORDER BY 
-                -- 1. HK IP DULU (nilai 1), Non-HK IP KEDUA (nilai 2)
                 CASE WHEN LOWER(TRIM(ip_export)) = 'hk' THEN 1 ELSE 2 END,
-                -- 2. REGULAR DULU (nilai 1), DAYPLANS KEDUA (nilai 2)
                 CASE WHEN (support_topup_type = 1 AND TRIM(COALESCE(fup_policy, '')) != '') THEN 2 ELSE 1 END,
-                -- 3. Volume kecil dulu
                 CAST(volume AS UNSIGNED) ASC,
-                -- 4. Harga murah dulu
                 CAST(price_usd AS DECIMAL(10,2)) ASC,
-                -- 5. Nama A-Z
                 name ASC
             $limitClause
         ");
@@ -310,15 +293,10 @@ function handleGetPackagesByRegion($pdo, $kurs) {
                 OR LOWER(location_name) LIKE LOWER(?)
             )
             ORDER BY 
-                -- 1. HK IP DULU (nilai 1), Non-HK IP KEDUA (nilai 2)
                 CASE WHEN LOWER(TRIM(ip_export)) = 'hk' THEN 1 ELSE 2 END,
-                -- 2. REGULAR DULU (nilai 1), DAYPLANS KEDUA (nilai 2)
                 CASE WHEN (support_topup_type = 1 AND TRIM(COALESCE(fup_policy, '')) != '') THEN 2 ELSE 1 END,
-                -- 3. Volume kecil dulu
                 CAST(volume AS UNSIGNED) ASC,
-                -- 4. Harga murah dulu
                 CAST(price_usd AS DECIMAL(10,2)) ASC,
-                -- 5. Nama A-Z
                 name ASC
             $limitClause
         ");
@@ -357,14 +335,12 @@ function handleGetPackagesByCountry($pdo, $kurs) {
             OR LOWER(location_code) LIKE LOWER(?)
         )
         ORDER BY 
-            -- LOCAL packages dulu untuk countries
             CASE 
                 WHEN type = 'LOCAL' THEN 0
                 WHEN type = 'REGIONAL' THEN 1000 
                 WHEN type = 'GLOBAL' THEN 2000
                 ELSE 3000 
             END +
-            -- OTOMATIS: HK IP → Non-HK IP → Regular → Dayplans
             CASE WHEN LOWER(ip_export) = 'hk' THEN 0 ELSE 100 END +
             CASE WHEN (support_topup_type = 1 AND TRIM(fup_policy) != '') THEN 10 ELSE 0 END +
             FLOOR(volume / 1000000) +
@@ -384,14 +360,9 @@ function handleGetPackagesByCountry($pdo, $kurs) {
     echo json_encode(['success' => true, 'packages' => $packages]);
 }
 
-// Apply same optimization to handleGetPackagesByRegion
+// Helper function to extract region prefix
 function extractRegionPrefix($packageName) {
-    // ✅ DEBUG: Log input
-    if (stripos($packageName, 'australia') !== false) {
-        error_log("extractRegionPrefix input: '" . $packageName . "'");
-    }
-    
-    // Daftar region prefix yang umum - URUTAN PENTING (yang paling spesifik dulu)
+    // Common region prefixes - order matters (most specific first)
     $regionPrefixes = [
         'Australia & New Zealand',
         'Australia and New Zealand',
@@ -417,7 +388,7 @@ function extractRegionPrefix($packageName) {
         'Central Asia'
     ];
     
-    // Pattern matching untuk Australia & New Zealand dengan berbagai format
+    // Pattern matching for Australia & New Zealand
     $australiaPatterns = [
         '/^Australia\s*(&|and|\+|\/)\s*New\s*Zealand/i',
         '/^Australia\s*New\s*Zealand/i'
@@ -425,54 +396,31 @@ function extractRegionPrefix($packageName) {
     
     foreach ($australiaPatterns as $pattern) {
         if (preg_match($pattern, $packageName)) {
-            error_log("Australia pattern matched: " . $packageName);
             return 'Australia & New Zealand';
         }
     }
     
-    // Cari prefix yang paling cocok (yang paling panjang)
+    // Find best matching prefix
     $bestMatch = '';
     foreach ($regionPrefixes as $prefix) {
         if (stripos($packageName, $prefix) === 0 && strlen($prefix) > strlen($bestMatch)) {
             $bestMatch = $prefix;
-            
-            // ✅ DEBUG: Log match
-            if (stripos($packageName, 'australia') !== false) {
-                error_log("MATCH FOUND: '" . $prefix . "' matches '" . $packageName . "'");
-            }
         }
     }
     
     if ($bestMatch) {
-        // ✅ DEBUG: Log result
-        if (stripos($packageName, 'australia') !== false) {
-            error_log("extractRegionPrefix result: '" . $bestMatch . "'");
-        }
         return $bestMatch;
     }
     
-    // Fallback: ambil sampai angka pertama atau tanda kurung
+    // Fallback: take until first number or parenthesis
     if (preg_match('/^([^0-9(]+)/', $packageName, $matches)) {
         $result = trim($matches[1]);
-        
-        // ✅ DEBUG: Log fallback
-        if (stripos($packageName, 'australia') !== false) {
-            error_log("extractRegionPrefix fallback: '" . $result . "'");
-        }
-        
         return $result;
     }
     
     // Ultimate fallback
     $words = explode(' ', trim($packageName));
-    $result = $words[0];
-    
-    // ✅ DEBUG: Log ultimate fallback
-    if (stripos($packageName, 'australia') !== false) {
-        error_log("extractRegionPrefix ultimate fallback: '" . $result . "'");
-    }
-    
-    return $result;
+    return $words[0];
 }
 
 function extractGlobalPrefix($packageName) {
@@ -482,7 +430,7 @@ function extractGlobalPrefix($packageName) {
         'Global'
     ];
     
-    // Cari prefix yang paling cocok
+    // Find best matching prefix
     $bestMatch = '';
     foreach ($globalPrefixes as $prefix) {
         if (stripos($packageName, $prefix) === 0 && strlen($prefix) > strlen($bestMatch)) {
@@ -530,7 +478,6 @@ function parseCountriesFromLocation($locationName) {
     return empty($countries) ? [$locationName] : $countries;
 }
 
-// Only output HTML if no AJAX action was processed
 ?>
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
@@ -546,7 +493,7 @@ function parseCountriesFromLocation($locationName) {
     <!-- CSS Files - Organized by component -->
     <link rel="stylesheet" href="assets/css/about.css?v=<?= time() ?>">
     <link rel="stylesheet" href="assets/css/navigation.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/index.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/index.css?v=<?= filemtime('assets/css/index.css') ?>">
     <link rel="stylesheet" href="assets/css/footer.css?v=<?= time() ?>">
     
     <meta name="theme-color" content="#4f46e5">
@@ -883,7 +830,6 @@ function parseCountriesFromLocation($locationName) {
                 <input type="tel" id="customerPhone" name="phone" class="form-input" pattern="[0-9\+\-\s]{10,15}" title="Enter a valid phone number">
             </div>
             
-            <!-- Update di index.php - bagian modal order -->
             <div class="form-group" id="countGroup">
                 <label for="orderCount" class="form-label">
                     <i class="fas fa-list-ol"></i>
@@ -968,7 +914,7 @@ function parseCountriesFromLocation($locationName) {
 </div>
 
 <!-- JavaScript Files - Organized by component -->
-<script src="assets/js/index.js?v=<?= time() ?>"></script>
+<script src="assets/js/index.js?v=<?= filemtime('assets/js/index.js') ?>"></script>
 <script src="assets/js/footer.js?v=<?= time() ?>"></script>
 </body>
 </html>
