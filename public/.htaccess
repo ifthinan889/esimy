@@ -1,8 +1,9 @@
 # Public folder .htaccess for MVC
 RewriteEngine On
 
-# Set base directory
-RewriteBase /public/
+# Handle admin asset requests
+RewriteCond %{REQUEST_URI} ^/admin/assets/(.*)$
+RewriteRule ^admin/assets/(.*)$ assets/$1 [L]
 
 # Ignore existing files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
