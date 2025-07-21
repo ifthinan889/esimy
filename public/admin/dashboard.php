@@ -164,11 +164,11 @@ $csrf_token = generateCSRFToken();
             <h1 class="dashboard-title">✨ Admin Dashboard</h1>
             <p class="dashboard-subtitle">Kelola eSIM portal dengan style yang keren!</p>
             <div class="dashboard-actions">
-                <a href="/admin/esim" class="btn-primary">
+                <a href="esim" class="btn-primary">
                     <span class="btn-icon">📱</span>
                     <span class="btn-text">Kelola eSIM</span>
                 </a>
-                <a href="/admin/orders" class="btn-secondary">
+                <a href="orders" class="btn-secondary">
                     <span class="btn-icon">📋</span>
                     <span class="btn-text">Lihat Orders</span>
                 </a>

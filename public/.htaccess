@@ -50,7 +50,7 @@ RewriteRule ^refund/?$ refund.php [L]
 RewriteRule ^detail/?$ detail.php [L,QSA]
 RewriteRule ^topup/?$ topup.php [L,QSA]
 
-# Admin routes
+# Admin routes - CLEAN URLs
 RewriteRule ^admin/?$ admin/login.php [L]
 RewriteRule ^admin/login/?$ admin/login.php [L]
 RewriteRule ^admin/dashboard/?$ admin/dashboard.php [L]
