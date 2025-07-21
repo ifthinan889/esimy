@@ -29,15 +29,15 @@ date_default_timezone_set('Asia/Jakarta');
 // Auto-detect BASE_URL
 $isCLI = (php_sapi_name() === 'cli');
 if ($isCLI) {
-    $protocol = 'http://';
+    $protocol = 'https://';
     $host = 'localhost';
-    $baseDir = '';
+    $baseDir = 'public';
 } else {
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $baseDir = trim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    $baseDir = 'public';
 }
-define('BASE_URL', $protocol . $host . ($baseDir ? '/' . $baseDir : ''));
+define('BASE_URL', $protocol . $host . '/' . $baseDir);
 
 // ===========================================
 // UTILITY FUNCTIONS

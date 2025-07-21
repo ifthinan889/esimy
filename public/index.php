@@ -10,11 +10,11 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Include required files
 try {
-    require_once __DIR__ . '/../src/includes/koneksi.php';
-    require_once __DIR__ . '/../src/includes/functions.php';
-    require_once __DIR__ . '/../src/includes/order_functions.php';
-    require_once __DIR__ . '/../src/includes/payment_functions.php';
-    require_once __DIR__ . '/../src/includes/api.php';
+    require_once dirname(__DIR__) . '/src/includes/koneksi.php';
+    require_once dirname(__DIR__) . '/src/includes/functions.php';
+    require_once dirname(__DIR__) . '/src/includes/order_functions.php';
+    require_once dirname(__DIR__) . '/src/includes/payment_functions.php';
+    require_once dirname(__DIR__) . '/src/includes/api.php';
 } catch (Exception $e) {
     error_log("Failed to include required files: " . $e->getMessage());
     die("System error. Please try again later.");
@@ -30,6 +30,24 @@ try {
 
 // Generate CSRF token
 $csrf_token = generateCSRFToken();
+
+// Simple routing for MVC
+$url = $_GET['url'] ?? '';
+$url = trim($url, '/');
+
+// Route to different pages
+switch ($url) {
+    case '':
+    case 'index':
+        // Default home page - continue with current logic
+        break;
+    case 'about':
+        include 'about.php';
+        exit;
+    default:
+        // Continue with current page logic
+        break;
+}
 
 // Handle AJAX requests first
 if (isset($_GET['action'])) {
@@ -517,7 +535,7 @@ function parseCountriesFromLocation($locationName) {
 </button>
 
 <!-- Navigation -->
-<?php require_once __DIR__ . '/../src/includes/navigation.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
 
 <!-- Main Content -->
 <main class="main-content">
@@ -764,7 +782,7 @@ function parseCountriesFromLocation($locationName) {
 </main>
 
 <!-- Footer -->
-<?php require_once __DIR__ . '/../src/includes/footer.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/footer.php'; ?>
 
 <!-- Country Modal -->
 <div id="countryModal" class="modal">

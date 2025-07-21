@@ -3,8 +3,9 @@ if (!defined('ALLOWED_ACCESS')) {
     die('Direct access not permitted');
 }
 
-// Get current page for active navigation
+// Get current page for active navigation - Fixed for MVC
 $currentPage = basename($_SERVER['PHP_SELF']);
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
 ?>
 
 <nav class="main-navigation">
@@ -17,15 +18,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </div>
         
         <div class="nav-menu">
-            <a href="index.php" class="nav-link <?= $currentPage == 'index.php' ? 'active' : '' ?>">
+            <a href="<?= BASE_URL ?>" class="nav-link <?= (empty($_GET['url']) || $_GET['url'] == 'index') ? 'active' : '' ?>">
                 <i class="fas fa-sim-card"></i>
                 <span>Browse eSIMs</span>
             </a>
-            <a href="about.php" class="nav-link <?= $currentPage == 'about.php' ? 'active' : '' ?>">
+            <a href="<?= BASE_URL ?>/about" class="nav-link <?= ($_GET['url'] ?? '') == 'about' ? 'active' : '' ?>">
                 <i class="fas fa-info-circle"></i>
                 <span>About</span>
             </a>
-            <a href="contact.php" class="nav-link <?= $currentPage == 'contact.php' ? 'active' : '' ?>">
+            <a href="<?= BASE_URL ?>/contact" class="nav-link <?= ($_GET['url'] ?? '') == 'contact' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>

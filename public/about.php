@@ -1,6 +1,7 @@
 <?php
 // Define allowed access for includes
 define('ALLOWED_ACCESS', true);
+require_once dirname(__DIR__) . '/config.php';
 
 // Start session securely
 if (session_status() === PHP_SESSION_NONE) {
@@ -35,7 +36,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php require_once __DIR__ . '/../src/includes/navigation.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
 
 <!-- Main Content -->
 <main class="main-content">
@@ -259,7 +260,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </main>
 
 <!-- Footer -->
-<?php require_once __DIR__ . '/../src/includes/footer.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
 <script src="assets/js/about.js?v=<?= time() ?>"></script>

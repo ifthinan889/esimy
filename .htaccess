@@ -1,12 +1,11 @@
-# Mengaktifkan mesin rewrite URL
+# MVC Structure - Redirect to public folder
 RewriteEngine On
 
-# Menentukan direktori dasar (root) dari aplikasi Anda
-RewriteBase /
+# Redirect all requests to public folder
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ /public/$1 [L,QSA]
 
-# Mengabaikan file yang benar-benar ada di server
+# Handle public folder requests
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-
-# Mengarahkan semua permintaan lain ke index.php
-RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
+RewriteRule ^public/(.*)$ public/index.php?url=$1 [L,QSA]
