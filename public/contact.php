@@ -7,6 +7,41 @@ require_once dirname(__DIR__) . '/config.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Handle contact form submission
+$successMessage = "";
+$errorMessage = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'send_message') {
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+        $errorMessage = "Invalid session. Please try again.";
+    } else {
+        // Validate form data
+        $firstName = trim($_POST['firstName'] ?? '');
+        $lastName = trim($_POST['lastName'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $subject = trim($_POST['subject'] ?? '');
+        $message = trim($_POST['message'] ?? '');
+        $inquiryType = $_POST['inquiryType'] ?? '';
+        
+        if (empty($firstName) || empty($lastName) || empty($email) || empty($subject) || empty($message)) {
+            $errorMessage = "Please fill in all required fields.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errorMessage = "Please enter a valid email address.";
+        } else {
+            // Here you would typically send the email or save to database
+            // For now, we'll just show a success message
+            $successMessage = "Thank you for your message! We'll get back to you within 24 hours.";
+            
+            // Log the contact form submission
+            error_log("Contact form submission: $firstName $lastName ($email) - $subject");
+        }
+    }
+}
+
+$csrf_token = generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="id" data-theme="light">
@@ -20,10 +55,10 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- CSS Files - Organized by component -->
-    <link rel="stylesheet" href="assets/css/about.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/navigation.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/contact.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="assets/css/footer.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/public/assets/css/about.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/public/assets/css/navigation.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/public/assets/css/contact.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="/public/assets/css/footer.css?v=<?= time() ?>">
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="description" content="Contact eSIM Store - Get 24/7 support via WhatsApp, email, or our contact form. We're here to help with all your eSIM needs.">
@@ -184,8 +219,26 @@ if (session_status() === PHP_SESSION_NONE) {
                 <p class="form-subtitle">Fill out the form below and we'll get back to you as soon as possible</p>
             </div>
             
+            <!-- Messages -->
+            <?php if ($successMessage): ?>
+            <div class="form-message success">
+                <i class="fas fa-check-circle"></i>
+                <span><?= htmlspecialchars($successMessage, ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($errorMessage): ?>
+            <div class="form-message error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <?php endif; ?>
+            
             <div class="contact-form-wrapper">
-                <form class="contact-form" id="contactForm">
+                <form class="contact-form" id="contactForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+                    <input type="hidden" name="action" value="send_message">
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label for="firstName" class="form-label">
@@ -444,7 +497,132 @@ if (session_status() === PHP_SESSION_NONE) {
 <?php include dirname(__DIR__) . '/src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
-<script src="assets/js/contact.js?v=<?= time() ?>"></script>
-<script src="assets/js/footer.js?v=<?= time() ?>"></script>
+<script src="/public/assets/js/contact.js?v=<?= time() ?>"></script>
+<script src="/public/assets/js/footer.js?v=<?= time() ?>"></script>
+
+<script>
+// Contact Support Functions
+function openWhatsAppSupport() {
+    const message = encodeURIComponent('Hello! I need help with eSIM services. Can you assist me?');
+    window.open(`https://wa.me/6281325525646?text=${message}`, '_blank');
+}
+
+function openEmailSupport() {
+    const subject = encodeURIComponent('eSIM Support Request');
+    const body = encodeURIComponent(`Hello eSIM Store Support Team,
+
+I need assistance with:
+
+[Please describe your issue here]
+
+Device Information:
+- Device Model: [Your device model]
+- Operating System: [iOS/Android version]
+- Order Number (if applicable): [Your order number]
+
+Thank you for your help!
+
+Best regards,
+[Your Name]`);
+    
+    window.open(`mailto:support@esimstore.com?subject=${subject}&body=${body}`, '_blank');
+}
+
+function openLiveChat() {
+    // This would typically integrate with a live chat service
+    // For now, we'll redirect to WhatsApp as fallback
+    alert('Live chat is currently redirecting to WhatsApp for immediate assistance.');
+    setTimeout(() => {
+        openWhatsAppSupport();
+    }, 2000);
+}
+
+function openEmergencyWhatsApp() {
+    const message = encodeURIComponent('🚨 URGENT: I need immediate help with my eSIM while traveling. Please assist ASAP!');
+    window.open(`https://wa.me/6281325525646?text=${message}`, '_blank');
+}
+
+// FAQ Functions
+function toggleFAQ(element) {
+    const isActive = element.classList.contains('active');
+    
+    // Close all FAQ items
+    document.querySelectorAll('.faq-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Open clicked item if it wasn't active
+    if (!isActive) {
+        element.classList.add('active');
+    }
+}
+
+// Theme Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    
+    // Initialize theme from localStorage or default to light
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+    
+    // Theme toggle event listener
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+    }
+    
+    function updateThemeIcon(theme) {
+        if (themeIcon) {
+            if (theme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+    }
+});
+
+// Character count for message textarea
+document.addEventListener('DOMContentLoaded', function() {
+    const messageTextarea = document.getElementById('message');
+    const charCount = document.getElementById('charCount');
+    
+    if (messageTextarea && charCount) {
+        messageTextarea.addEventListener('input', function() {
+            const currentLength = this.value.length;
+            charCount.textContent = currentLength;
+            
+            if (currentLength > 1000) {
+                charCount.style.color = 'var(--error)';
+            } else if (currentLength > 800) {
+                charCount.style.color = 'var(--warning)';
+            } else {
+                charCount.style.color = 'var(--text-muted)';
+            }
+        });
+    }
+});
+
+// Quick help functions
+function showCompatibilityCheck() {
+    alert('To check eSIM compatibility:\n\n1. Dial *#06# on your device\n2. If you see an EID number, your device supports eSIM\n3. Contact us if you need help!');
+}
+
+function showInstallationGuide() {
+    alert('eSIM Installation Steps:\n\n1. Receive QR code via email\n2. Go to Settings > Cellular > Add Cellular Plan\n3. Scan the QR code\n4. Follow setup instructions\n\nNeed help? Contact our 24/7 support!');
+}
+
+function showTroubleshooting() {
+    alert('Common troubleshooting steps:\n\n1. Restart your device\n2. Check network settings\n3. Ensure eSIM is activated\n4. Contact support if issues persist\n\nFor detailed help, use WhatsApp support!');
+}
+</script>
 </body>
 </html>
