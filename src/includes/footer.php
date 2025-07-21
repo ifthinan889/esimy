@@ -31,9 +31,9 @@ if (!defined('ALLOWED_ACCESS')) {
             <div class="footer-section">
                 <h4 class="footer-title">Quick Links</h4>
                 <ul class="footer-links">
-                    <li><a href="index.php">Browse eSIMs</a></li>
-                    <li><a href="about.php">About Us</a></li>
-                    <li><a href="contact.php">Contact Support</a></li>
+                    <li><a href="/">Browse eSIMs</a></li>
+                    <li><a href="/about">About Us</a></li>
+                    <li><a href="/contact">Contact Support</a></li>
                     <li><a href="#" onclick="showCompatibilityCheck()">Device Compatibility</a></li>
                     <li><a href="#" onclick="showInstallationGuide()">Installation Guide</a></li>
                 </ul>
@@ -43,9 +43,9 @@ if (!defined('ALLOWED_ACCESS')) {
             <div class="footer-section">
                 <h4 class="footer-title">Legal</h4>
                 <ul class="footer-links">
-                    <li><a href="terms.php">Terms & Conditions</a></li>
-                    <li><a href="privacy.php">Privacy Policy</a></li>
-                    <li><a href="refund.php">Refund Policy</a></li>
+                    <li><a href="/terms">Terms & Conditions</a></li>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/refund">Refund Policy</a></li>
                     <li><a href="#" onclick="showDataRetentionPolicy()">Data Retention</a></li>
                 </ul>
             </div>

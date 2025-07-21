@@ -890,27 +890,27 @@ $currentExchangeRate = getCurrentExchangeRate();
 
 <!-- Bottom Navigation - Sama seperti eSIM -->
 <nav class="bottom-nav">
-    <a href="dashboard.php" class="nav-item">
+    <a href="/admin/dashboard" class="nav-item">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">Dashboard</span>
     </a>
-    <a href="orders.php" class="nav-item activate">
+    <a href="/admin/orders" class="nav-item active">
         <span class="nav-icon">📦</span>
         <span class="nav-label">Orders</span>
     </a>
-    <a href="esim.php" class="nav-item">
+    <a href="/admin/esim" class="nav-item">
         <span class="nav-icon">📱</span>
         <span class="nav-label">Packages</span>
     </a>
-    <a href="topup.php" class="nav-item">
+    <a href="/admin/topup" class="nav-item">
         <span class="nav-icon">💰</span>
         <span class="nav-label">DaftarTopup</span>
     </a>
-    <a href="settings.php" class="nav-item">
+    <a href="/admin/settings" class="nav-item">
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">Settings</span>
     </a>
-    <a href="logout.php" class="nav-item">
+    <a href="/admin/logout" class="nav-item">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Logout</span>
     </a>

@@ -254,6 +254,7 @@ $csrf_token = generateCSRFToken();
 
             <div class="login-footer">
                 <a href="../index.php" class="back-link">
+                <a href="/" class="back-link">
                     <i class="fas fa-arrow-left"></i>
                     Kembali ke Halaman Utama
                 </a>

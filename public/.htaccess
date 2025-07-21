@@ -1,14 +1,7 @@
-# Public folder .htaccess
+# Public folder .htaccess - Clean URLs without .php
 RewriteEngine On
 
-# Security headers
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options SAMEORIGIN
-    Header always set X-XSS-Protection "1; mode=block"
-</IfModule>
-
-# MIME types for assets - CRITICAL FOR FIXING MIME ERRORS
+# MIME types for assets - CRITICAL
 <IfModule mod_mime.c>
     AddType text/css .css
     AddType application/javascript .js
@@ -18,6 +11,13 @@ RewriteEngine On
     AddType image/gif .gif
     AddType image/svg+xml .svg
     AddType application/json .json
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options SAMEORIGIN
+    Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
 
 # Cache control for assets
@@ -31,24 +31,36 @@ RewriteEngine On
     ExpiresByType image/gif "access plus 1 month"
 </IfModule>
 
-# Handle existing files and directories first (IMPORTANT!)
+# Handle existing files and directories first (CRITICAL!)
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Allow access to src/includes/generate_qr.php
-RewriteRule ^src/includes/generate_qr\.php$ ../src/includes/generate_qr.php [L]
+# Special route for QR generator
+RewriteRule ^qr-generator$ ../src/includes/generate_qr.php [L]
 
-# Route specific pages
+# Clean URL routing (without .php extension)
 RewriteRule ^about/?$ about.php [L]
 RewriteRule ^contact/?$ contact.php [L]
 RewriteRule ^terms/?$ terms.php [L]
 RewriteRule ^privacy/?$ privacy.php [L]
 RewriteRule ^refund/?$ refund.php [L]
+RewriteRule ^detail/?$ detail.php [L,QSA]
+RewriteRule ^topup/?$ topup.php [L,QSA]
 
-# Route everything else to index.php
+# Admin routes
+RewriteRule ^admin/?$ admin/login.php [L]
+RewriteRule ^admin/login/?$ admin/login.php [L]
+RewriteRule ^admin/dashboard/?$ admin/dashboard.php [L]
+RewriteRule ^admin/orders/?$ admin/orders.php [L]
+RewriteRule ^admin/esim/?$ admin/esim.php [L]
+RewriteRule ^admin/settings/?$ admin/settings.php [L]
+RewriteRule ^admin/topup/?$ admin/topup.php [L]
+RewriteRule ^admin/logout/?$ admin/logout.php [L]
+
+# Default route to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
+RewriteRule ^(.*)$ index.php [L,QSA]

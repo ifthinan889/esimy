@@ -268,7 +268,7 @@ if (!empty($ac)) {
 $isNewEsim = ($esimStatus === "GOT_RESOURCE");
 
 if ($isNewEsim) {
-    $qrCodeUrl = "src/includes/generate_qr.php?data=" . urlencode($ca);
+    $qrCodeUrl = "qr-generator?data=" . urlencode($ca);
 } else {
     $totalKuotaGB = isset($esim["totalVolume"]) ? round($esim["totalVolume"] / (1024**3), 2) : 0;
     $sisaKuotaGB = max(0, $totalKuotaGB - $orderUsage);

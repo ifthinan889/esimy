@@ -19,15 +19,15 @@ $requestPath = trim($requestUri, '/');
         </div>
         
         <div class="nav-menu">
-            <a href="index.php" class="nav-link <?= ($currentPage == 'index.php' || $requestPath == '') ? 'active' : '' ?>">
+            <a href="/" class="nav-link <?= ($currentPage == 'index.php' || $requestPath == '') ? 'active' : '' ?>">
                 <i class="fas fa-sim-card"></i>
                 <span>Browse eSIMs</span>
             </a>
-            <a href="about.php" class="nav-link <?= ($currentPage == 'about.php' || $requestPath == 'about') ? 'active' : '' ?>">
+            <a href="/about" class="nav-link <?= ($currentPage == 'about.php' || $requestPath == 'about') ? 'active' : '' ?>">
                 <i class="fas fa-info-circle"></i>
                 <span>About</span>
             </a>
-            <a href="contact.php" class="nav-link <?= ($currentPage == 'contact.php' || $requestPath == 'contact') ? 'active' : '' ?>">
+            <a href="/contact" class="nav-link <?= ($currentPage == 'contact.php' || $requestPath == 'contact') ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>
