@@ -1,17 +1,6 @@
 # Public folder .htaccess for MVC
 RewriteEngine On
 
-# Handle admin asset requests
-RewriteCond %{REQUEST_URI} ^/admin/assets/(.*)$
-RewriteRule ^admin/assets/(.*)$ assets/$1 [L]
-
-# Ignore existing files and directories
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# Route everything through index.php
-RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
-
 # Security headers
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options nosniff
@@ -20,12 +9,34 @@ RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Prevent access to sensitive files
-<Files "*.php">
-    <RequireAll>
-        Require all granted
-    </RequireAll>
-</Files>
+# MIME types for assets
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js
+    AddType image/png .png
+    AddType image/jpeg .jpg
+    AddType image/jpeg .jpeg
+    AddType image/gif .gif
+    AddType image/svg+xml .svg
+</IfModule>
 
-# Block access to config and src from public
+# Cache control for assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+</IfModule>
+
+# Ignore existing files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything through index.php
+RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
+
+# Prevent access to config and src from public
 RewriteRule ^(config|src)/ - [F,L]

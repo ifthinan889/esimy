@@ -633,7 +633,7 @@ $currentExchangeRate = getCurrentExchangeRate();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="../assets/css/orders.css?v=<?= file_exists(__DIR__ . '/../assets/css/orders.css') ? filemtime(__DIR__ . '/../assets/css/orders.css') : time() ?>">
+    <link rel="stylesheet" href="/public/assets/css/orders.css?v=<?= time() ?>">
     <meta name="theme-color" content="#0f172a">
     <meta name="description" content="Orders management for eSIM Portal">
     
@@ -916,7 +916,7 @@ $currentExchangeRate = getCurrentExchangeRate();
     </a>
 </nav>
 
-<script src="../assets/js/orders.js?v=<?= file_exists(__DIR__ . '/../assets/js/orders.js') ? filemtime(__DIR__ . '/../assets/js/orders.js') : time() ?>"></script>
+<script src="/public/assets/js/orders.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

@@ -18,15 +18,15 @@ $requestUri = $_SERVER['REQUEST_URI'] ?? '';
         </div>
         
         <div class="nav-menu">
-            <a href="<?= BASE_URL ?>" class="nav-link <?= (empty($_GET['url']) || $_GET['url'] == 'index') ? 'active' : '' ?>">
+            <a href="<?= PUBLIC_URL ?>" class="nav-link <?= (empty($_GET['url']) || $_GET['url'] == 'index') ? 'active' : '' ?>">
                 <i class="fas fa-sim-card"></i>
                 <span>Browse eSIMs</span>
             </a>
-            <a href="<?= BASE_URL ?>/about" class="nav-link <?= ($_GET['url'] ?? '') == 'about' ? 'active' : '' ?>">
+            <a href="<?= PUBLIC_URL ?>/about" class="nav-link <?= ($_GET['url'] ?? '') == 'about' ? 'active' : '' ?>">
                 <i class="fas fa-info-circle"></i>
                 <span>About</span>
             </a>
-            <a href="<?= BASE_URL ?>/contact" class="nav-link <?= ($_GET['url'] ?? '') == 'contact' ? 'active' : '' ?>">
+            <a href="<?= PUBLIC_URL ?>/contact" class="nav-link <?= ($_GET['url'] ?? '') == 'contact' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>

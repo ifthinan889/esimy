@@ -31,13 +31,14 @@ $isCLI = (php_sapi_name() === 'cli');
 if ($isCLI) {
     $protocol = 'https://';
     $host = 'localhost';
-    $baseDir = 'public';
+    $baseDir = '';
 } else {
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $baseDir = 'public';
+    $baseDir = '';
 }
-define('BASE_URL', $protocol . $host . '/' . $baseDir);
+define('BASE_URL', $protocol . $host);
+define('PUBLIC_URL', $protocol . $host . '/public');
 
 // ===========================================
 // UTILITY FUNCTIONS
