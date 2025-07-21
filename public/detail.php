@@ -309,7 +309,7 @@ if (function_exists('updateEsimStatus')) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="assets/css/detail.css?v=<?= filemtime('assets/css/detail.css') ?>">
+    <link rel="stylesheet" href="assets/css/detail.css?v=<?= file_exists('assets/css/detail.css') ? filemtime('assets/css/detail.css') : time() ?>">
     
     <!-- Meta tags -->
     <meta name="theme-color" content="#667eea">
@@ -319,7 +319,7 @@ if (function_exists('updateEsimStatus')) {
     <!-- Preload critical resources -->
     <link rel="preload" href="assets/css/detail.css" as="style">
     <?php if ($isNewEsim && $qrCodeUrl): ?>
-    <link rel="preload" href="<?= $qrCodeUrl ?>" as="image">
+    <link rel="preload" href="<?= htmlspecialchars($qrCodeUrl, ENT_QUOTES, 'UTF-8') ?>" as="image">
     <?php endif; ?>
 </head>
 <body class="<?= $isNewEsim ? 'new-esim' : ($kuotaHabis ? 'quota-depleted' : 'active-esim') ?>">
@@ -613,7 +613,7 @@ if (function_exists('updateEsimStatus')) {
     </div>
 </div>
 
-<script src="assets/js/detail.js?v=<?= filemtime('assets/js/detail.js') ?>"></script>
+<script src="assets/js/detail.js?v=<?= file_exists('assets/js/detail.js') ? filemtime('assets/js/detail.js') : time() ?>"></script>
 <?php if (function_exists('generateStatusJsMappings')): ?>
 <?= generateStatusJsMappings() ?>
 <?php endif; ?>

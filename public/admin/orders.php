@@ -634,7 +634,7 @@ $currentExchangeRate = getCurrentExchangeRate();
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Orders CSS yang sudah diselaraskan dengan eSIM style -->
-    <link rel="stylesheet" href="assets/css/orders.css?v=<?= filemtime('assets/css/orders.css') ?>">
+    <link rel="stylesheet" href="../assets/css/orders.css?v=<?= filemtime('../assets/css/orders.css') ?>">
     <meta name="theme-color" content="#0f172a">
     <meta name="description" content="Orders management for eSIM Portal">
     
@@ -918,7 +918,7 @@ $currentExchangeRate = getCurrentExchangeRate();
 </nav>
 
 <!-- Orders JavaScript yang sudah diselaraskan -->
-<script src="assets/js/orders.js?v=<?= filemtime('assets/js/orders.js') ?>"></script>
+<script src="../assets/js/orders.js?v=<?= filemtime('../assets/js/orders.js') ?>"></script>
 
 </body>
 </html>

@@ -143,7 +143,7 @@ $csrf_token = generateCSRFToken();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/dashboards.css?v=<?= filemtime('assets/css/dashboards.css') ?>">
+    <link rel="stylesheet" href="../assets/css/dashboards.css?v=<?= filemtime('../assets/css/dashboards.css') ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Admin dashboard for eSIM Portal">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
@@ -483,6 +483,6 @@ $csrf_token = generateCSRFToken();
 </nav>
 
 <!-- Dashboard JavaScript yang sudah diselaraskan - PATH DIPERBAIKI -->
-<script src="assets/js/dashboards.js?v=<?= filemtime('assets/js/dashboards.js') ?>"></script>
+<script src="../assets/js/dashboards.js?v=<?= filemtime('../assets/js/dashboards.js') ?>"></script>
 </body>
 </html>

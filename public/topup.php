@@ -593,7 +593,7 @@ header('Pragma: no-cache');
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/topup.css?v=<?= filemtime('assets/css/topup.css') ?>">
+    <link rel="stylesheet" href="assets/css/topup.css?v=<?= file_exists('assets/css/topup.css') ? filemtime('assets/css/topup.css') : time() ?>">
 </head>
 <body>
     <div class="container">
@@ -906,6 +906,6 @@ header('Pragma: no-cache');
             expiredAt: '<?= $paymentResult['expired_at'] ?? '' ?>'
         };
     </script>
-    <script src="assets/js/topup.js?v=<?= filemtime('assets/js/topup.js') ?>"></script>
+    <script src="assets/js/topup.js?v=<?= file_exists('assets/js/topup.js') ? filemtime('assets/js/topup.js') : time() ?>"></script>
 </body>
 </html>
