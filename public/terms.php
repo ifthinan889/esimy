@@ -378,8 +378,8 @@ if (session_status() === PHP_SESSION_NONE) {
                     <div class="privacy-reference">
                         <i class="fas fa-shield-alt"></i>
                         <div>
-                            <p>Your privacy is important to us. Please review our <a href="privacy.php">Privacy Policy</a> to understand how we collect, use, and protect your personal information.</p>
-                            <a href="privacy.php" class="privacy-link">
+                            <p>Your privacy is important to us. Please review our <a href="/privacy">Privacy Policy</a> to understand how we collect, use, and protect your personal information.</p>
+                            <a href="/privacy" class="privacy-link">
                                 <i class="fas fa-arrow-right"></i> View Privacy Policy
                             </a>
                         </div>

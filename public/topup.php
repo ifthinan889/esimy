@@ -841,27 +841,27 @@ header('Pragma: no-cache');
                     </a>
                     
                     <?php if (!empty($token)): ?>
-                    <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-secondary">
+                    <a href="/detail?token=<?= htmlspecialchars($token) ?>" class="btn btn-secondary">
                         <i class="fas fa-eye"></i>
                         Check eSIM Status
                     </a>
                     <?php else: ?>
-                    <!-- <a href="index.php" class="btn btn-secondary">Back to Home</a> -->
+                    <!-- <a href="/" class="btn btn-secondary">Back to Home</a> -->
                     <?php endif; ?>
                     
                 <?php else: ?>
                     <!-- ✅ JIKA TOPUP SUKSES - TAMPILKAN NORMAL BUTTONS -->
                     <?php if (!empty($token)): ?>
-                    <a href="detail.php?token=<?= htmlspecialchars($token) ?>" class="btn btn-primary">
+                    <a href="/detail?token=<?= htmlspecialchars($token) ?>" class="btn btn-primary">
                         <i class="fas fa-eye"></i>
                         View eSIM Details
                     </a>
-                    <a href="topup.php?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-secondary">
+                    <a href="/topup?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-secondary">
                         <i class="fas fa-plus"></i>
                         Add More Data
                     </a>
                     <?php else: ?>
-                    <a href="index.php" class="btn btn-primary">Back to Home</a>
+                    <a href="/" class="btn btn-primary">Back to Home</a>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
@@ -878,9 +878,9 @@ header('Pragma: no-cache');
             
             <div class="action-buttons">
                 <?php if (!empty($token) && !empty($iccid)): ?>
-                <a href="topup.php?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-primary">Generate QRIS Baru</a>
+                <a href="/topup?token=<?= htmlspecialchars($token) ?>&iccid=<?= htmlspecialchars($iccid) ?>" class="btn btn-primary">Generate QRIS Baru</a>
                 <?php else: ?>
-                <a href="index.php" class="btn btn-primary">Back to Home</a>
+                <a href="/" class="btn btn-primary">Back to Home</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -888,7 +888,7 @@ header('Pragma: no-cache');
         <?php else: ?>
         <!-- FALLBACK -->
         <div class="alert alert-warning"><br>
-            <a href="index.php" class="btn btn-primary">Back to Home</a>
+            <a href="/" class="btn btn-primary">Back to Home</a>
         </div>
         <?php endif; ?>
 

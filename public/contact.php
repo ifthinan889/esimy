@@ -338,7 +338,7 @@ $csrf_token = generateCSRFToken();
                         <label class="checkbox-label">
                             <input type="checkbox" id="privacy" name="privacy" class="form-checkbox" required>
                             <span class="checkbox-custom"></span>
-                            <span class="checkbox-text">I agree to the <a href="privacy.php" target="_blank">Privacy Policy</a> and <a href="terms.php" target="_blank">Terms & Conditions</a> *</span>
+                            <span class="checkbox-text">I agree to the <a href="/privacy" target="_blank">Privacy Policy</a> and <a href="/terms" target="_blank">Terms & Conditions</a> *</span>
                         </label>
                     </div>
                     
@@ -385,7 +385,7 @@ $csrf_token = generateCSRFToken();
                                 <i class="fas fa-tools"></i>
                                 Troubleshooting Tips
                             </a>
-                            <a href="refund.php" class="help-link">
+                            <a href="/refund" class="help-link">
                                 <i class="fas fa-undo-alt"></i>
                                 Refund Policy
                             </a>
