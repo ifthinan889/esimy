@@ -1,7 +1,7 @@
 <?php
 // Define allowed access for includes
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/config.php';
+require_once dirname(__DIR__) . '/config.php';
 setSecurityHeaders();
 
 if (session_status() === PHP_SESSION_NONE) {

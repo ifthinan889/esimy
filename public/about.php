@@ -20,7 +20,6 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- CSS Files - Organized by component -->
-    <!--<link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">-->
     <link rel="stylesheet" href="assets/css/navigation.css?v=<?= time() ?>">
     <link rel="stylesheet" href="assets/css/about.css?v=<?= time() ?>">
     <link rel="stylesheet" href="assets/css/footer.css?v=<?= time() ?>">
