@@ -8,7 +8,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 define('ALLOWED_ACCESS', true);
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/includes/koneksi.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/api.php';

@@ -71,7 +71,7 @@ $csrf_token = generateCSRFToken();
 </button>
 
 <!-- Navigation -->
-<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
+<?php include '../src/includes/navigation.php'; ?>
 
 <main class="main-content">
     <!-- Hero Section -->

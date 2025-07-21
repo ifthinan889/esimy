@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php include 'includes/navigation.php'; ?>
+<?php include '../src/includes/navigation.php'; ?>
 
 <main class="main-content">
     <section class="legal-section">

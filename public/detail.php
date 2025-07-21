@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Include required files
 try {
-    require_once __DIR__ . '/../src/includes/koneksi.php'; // Naik satu level, lalu masuk ke src/includes
+    require_once __DIR__ . '/../src/includes/koneksi.php';
     require_once __DIR__ . '/../src/includes/functions.php';
     require_once __DIR__ . '/../src/includes/api.php';
 } catch (Exception $e) {

@@ -1,4 +1,4 @@
-# Public folder .htaccess for MVC
+# Public folder .htaccess - Fixed routing
 RewriteEngine On
 
 # Security headers
@@ -31,12 +31,21 @@ RewriteEngine On
     ExpiresByType image/gif "access plus 1 month"
 </IfModule>
 
-# Ignore existing files and directories
+# Handle existing files first (assets, admin, etc)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route specific pages
+RewriteRule ^about/?$ about.php [L]
+RewriteRule ^contact/?$ contact.php [L]
+RewriteRule ^terms/?$ terms.php [L]
+RewriteRule ^privacy/?$ privacy.php [L]
+RewriteRule ^refund/?$ refund.php [L]
+
+# Route everything else to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-
-# Route everything through index.php
 RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
-
-# Prevent access to config and src from public
-RewriteRule ^(config|src)/ - [F,L]

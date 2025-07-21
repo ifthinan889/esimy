@@ -31,24 +31,6 @@ try {
 // Generate CSRF token
 $csrf_token = generateCSRFToken();
 
-// Simple routing for MVC
-$url = $_GET['url'] ?? '';
-$url = trim($url, '/');
-
-// Route to different pages
-switch ($url) {
-    case '':
-    case 'index':
-        // Default home page - continue with current logic
-        break;
-    case 'about':
-        include 'about.php';
-        exit;
-    default:
-        // Continue with current page logic
-        break;
-}
-
 // Handle AJAX requests first
 if (isset($_GET['action'])) {
     header('Content-Type: application/json');
