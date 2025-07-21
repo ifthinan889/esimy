@@ -151,7 +151,7 @@ $csrf_token = generateCSRFToken();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/settings.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/settings.css?v=<?= time() ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Admin settings for eSIM Portal">
 </head>
@@ -655,6 +655,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"]) && $_POST["a
         <span class="nav-label">Logout</span>
     </a>
 </nav>
-<script src="../assets/js/settings.js?v=<?= time() ?>"></script>
+<script src="assets/js/settings.js?v=<?= time() ?>"></script>
 </body>
 </html>

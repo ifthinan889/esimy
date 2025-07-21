@@ -17,7 +17,31 @@ RewriteEngine On
     AddType image/png .png
     AddType image/jpeg .jpg
     AddType image/gif .gif
+    AddType application/json .json
 </IfModule>
+
+# Enable compression for admin assets
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE text/html
+</IfModule>
+
+# Cache control for admin assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 hour"
+    ExpiresByType application/javascript "access plus 1 hour"
+    ExpiresByType image/png "access plus 1 day"
+    ExpiresByType image/jpeg "access plus 1 day"
+</IfModule>
+
+# Handle existing files first (CRITICAL!)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
 # Security: Block access to sensitive files
 <Files "*.log">

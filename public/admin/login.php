@@ -136,7 +136,7 @@ $csrf_token = generateCSRFToken();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/login.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/login.css?v=<?= time() ?>">
     <meta name="theme-color" content="#6366f1">
     <meta name="description" content="Admin login for eSIM Portal">
 </head>
@@ -280,6 +280,7 @@ $csrf_token = generateCSRFToken();
     </div>
 
     <script src="../assets/js/login.js?v=<?= time() ?>"></script>
+    <script src="assets/js/login.js?v=<?= time() ?>"></script>
     <script>
         function closeAlert(id) {
             const el = document.getElementById(id);
