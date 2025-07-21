@@ -488,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/public/assets/css/esim-style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/css/esim-style.css?v=<?= time() ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Modern eSIM store with trendy Gen Z design">
     <!-- Security headers -->
@@ -826,6 +826,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 </div>
-<script src="/public/assets/js/esim.js?v=<?= time() ?>"></script>
+<script src="../assets/js/esim.js?v=<?= time() ?>"></script>
 </body>
 </html>

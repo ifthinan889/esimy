@@ -395,7 +395,7 @@ function formatRelativeTime($datetime) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/public/assets/css/topup.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="../assets/css/topup.css?v=<?= time() ?>">
     <meta name="theme-color" content="#667eea">
     <meta name="description" content="Topup orders monitoring for eSIM Portal">
 </head>
@@ -831,6 +831,6 @@ window.topupData = <?= json_encode([
    'stats' => $stats
 ]) ?>;
 </script>
-<script src="/public/assets/js/topup.js?v=<?= time() ?>"></script>
+<script src="../assets/js/topup.js?v=<?= time() ?>"></script>
 </body>
 </html>

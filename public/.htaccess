@@ -1,4 +1,4 @@
-# Public folder .htaccess - Fixed routing
+# Public folder .htaccess
 RewriteEngine On
 
 # Security headers
@@ -6,10 +6,9 @@ RewriteEngine On
     Header always set X-Content-Type-Options nosniff
     Header always set X-Frame-Options SAMEORIGIN
     Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# MIME types for assets
+# MIME types for assets - CRITICAL FOR FIXING MIME ERRORS
 <IfModule mod_mime.c>
     AddType text/css .css
     AddType application/javascript .js
@@ -18,6 +17,7 @@ RewriteEngine On
     AddType image/jpeg .jpeg
     AddType image/gif .gif
     AddType image/svg+xml .svg
+    AddType application/json .json
 </IfModule>
 
 # Cache control for assets
@@ -31,7 +31,7 @@ RewriteEngine On
     ExpiresByType image/gif "access plus 1 month"
 </IfModule>
 
-# Handle existing files first (assets, admin, etc)
+# Handle existing files and directories first (IMPORTANT!)
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 

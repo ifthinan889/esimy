@@ -10,7 +10,7 @@ RewriteEngine On
     Header always set Pragma "no-cache"
 </IfModule>
 
-# MIME types
+# MIME types - CRITICAL FOR ADMIN ASSETS
 <IfModule mod_mime.c>
     AddType text/css .css
     AddType application/javascript .js
@@ -36,7 +36,7 @@ RewriteEngine On
     Require all denied
 </Files>
 
-# Block direct access to PHP files except allowed ones
+# Allow access to admin PHP files
 <FilesMatch "\.php$">
     <RequireAll>
         Require all granted

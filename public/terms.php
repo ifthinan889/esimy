@@ -35,7 +35,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php include '../src/includes/navigation.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
 
 <main class="main-content">
     <section class="legal-section">
@@ -544,7 +544,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </main>
 
 <!-- Footer -->
-<?php include 'includes/footer.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
 <script src="assets/js/terms.js?v=<?= time() ?>"></script>

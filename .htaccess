@@ -1,7 +1,7 @@
-# Root .htaccess - MVC Structure
+# Root .htaccess - Redirect to public folder
 RewriteEngine On
 
-# Redirect all requests to public folder
+# Redirect all requests to public folder except if already in public
 RewriteCond %{REQUEST_URI} !^/public/
 RewriteRule ^(.*)$ public/$1 [L,QSA]
 

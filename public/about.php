@@ -36,7 +36,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </button>
 
 <!-- Navigation -->
-<?php include '../src/includes/navigation.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
 
 <!-- Main Content -->
 <main class="main-content">

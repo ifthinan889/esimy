@@ -55,10 +55,10 @@ $csrf_token = generateCSRFToken();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- CSS Files - Organized by component -->
-    <link rel="stylesheet" href="/public/assets/css/about.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="/public/assets/css/navigation.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="/public/assets/css/contact.css?v=<?= time() ?>">
-    <link rel="stylesheet" href="/public/assets/css/footer.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/about.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/navigation.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/contact.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="assets/css/footer.css?v=<?= time() ?>">
     
     <meta name="theme-color" content="#4f46e5">
     <meta name="description" content="Contact eSIM Store - Get 24/7 support via WhatsApp, email, or our contact form. We're here to help with all your eSIM needs.">
@@ -71,7 +71,7 @@ $csrf_token = generateCSRFToken();
 </button>
 
 <!-- Navigation -->
-<?php include '../src/includes/navigation.php'; ?>
+<?php include dirname(__DIR__) . '/src/includes/navigation.php'; ?>
 
 <main class="main-content">
     <!-- Hero Section -->
@@ -497,8 +497,8 @@ $csrf_token = generateCSRFToken();
 <?php include dirname(__DIR__) . '/src/includes/footer.php'; ?>
 
 <!-- JavaScript Files - Organized by component -->
-<script src="/public/assets/js/contact.js?v=<?= time() ?>"></script>
-<script src="/public/assets/js/footer.js?v=<?= time() ?>"></script>
+<script src="assets/js/contact.js?v=<?= time() ?>"></script>
+<script src="assets/js/footer.js?v=<?= time() ?>"></script>
 
 <script>
 // Contact Support Functions
