@@ -2,6 +2,9 @@
 if (!defined('ALLOWED_ACCESS')) {
     die('Direct access not permitted');
 }
+
+// Get current page for active navigation
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 
 <nav class="main-navigation">
@@ -14,15 +17,15 @@ if (!defined('ALLOWED_ACCESS')) {
         </div>
         
         <div class="nav-menu">
-            <a href="index.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
+            <a href="index.php" class="nav-link <?= $currentPage == 'index.php' ? 'active' : '' ?>">
                 <i class="fas fa-sim-card"></i>
                 <span>Browse eSIMs</span>
             </a>
-            <a href="about.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'about.php' ? 'active' : '' ?>">
+            <a href="about.php" class="nav-link <?= $currentPage == 'about.php' ? 'active' : '' ?>">
                 <i class="fas fa-info-circle"></i>
                 <span>About</span>
             </a>
-            <a href="contact.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : '' ?>">
+            <a href="contact.php" class="nav-link <?= $currentPage == 'contact.php' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i>
                 <span>Contact</span>
             </a>
